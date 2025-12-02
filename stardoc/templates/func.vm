@@ -1,0 +1,23 @@
+<a id="${funcInfo.functionName}"></a>
+
+## ${funcInfo.functionName}
+
+<pre>
+${funcInfo.functionName}(#foreach($param in $funcInfo.parameterList)<a href="#${funcInfo.functionName}-${param.name}">${param.name}</a>#if($foreach.hasNext), #end#end)
+</pre>
+
+${funcInfo.docString}
+
+**PARAMETERS**
+
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+#foreach ($param in $funcInfo.parameterList)
+| <a id="${funcInfo.functionName}-${param.name}"></a>${param.name} | #if($param.docString.trim().isEmpty()) - #else ${param.docString} #end | #if($param.name == "device_ids") *All devices* #else ${param.defaultValue} #end |
+#end
+
+#if ($funcInfo.return.docString)
+**RETURNS**
+
+${funcInfo.return.docString}
+#end

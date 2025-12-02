@@ -1,0 +1,29 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_binary(
+    name = "get_application_id",
+    srcs = ["get_application_id.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:xml",
+    ],
+)
+
+rust_binary(
+    name = "measure_cft",
+    srcs = ["measure_cft.rs"],
+    deps = [
+        "@crates//:clap",
+    ],
+)
+
+rust_binary(
+    name = "scale_image",
+    srcs = ["scale_image.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)

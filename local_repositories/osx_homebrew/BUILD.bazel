@@ -1,0 +1,9 @@
+load("@rules_cc//cc:cc_import.bzl", "cc_import")
+
+# Install via: brew install libmtp
+cc_import(
+    name = "libmtp",
+    hdrs = ["include/libmtp.h"],
+    shared_library = "lib/libmtp.dylib",
+    visibility = ["//visibility:public"],
+)

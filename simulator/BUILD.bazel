@@ -1,0 +1,30 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+rust_library(
+    name = "lib",
+    srcs = ["lib.rs"],
+    deps = [
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:regex",
+        "@crates//:tokio",
+    ],
+)
+
+rust_binary(
+    name = "simulate",
+    srcs = ["simulate.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lib",
+    ],
+)
+
+rust_binary(
+    name = "test",
+    srcs = ["test.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lib",
+    ],
+)

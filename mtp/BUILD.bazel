@@ -1,0 +1,37 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+alias(
+    name = "libmtp",
+    actual = select({
+        "@platforms//os:osx": "@osx_homebrew//:libmtp",
+        "//conditions:default": "//:libmtp_unsupported",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "lib",
+    srcs = ["lib.rs"],
+    deps = [
+        ":libmtp",
+        "@crates//:libc",
+    ],
+)
+
+rust_binary(
+    name = "upload",
+    srcs = ["upload.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lib",
+    ],
+)
+
+rust_binary(
+    name = "download",
+    srcs = ["download.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":lib",
+    ],
+)
