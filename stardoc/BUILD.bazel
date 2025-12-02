@@ -1,0 +1,39 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+bzl_library(
+    name = "defs_lib",
+    srcs = ["//:defs.bzl"],
+    deps = [
+        "@bazel_skylib//lib:paths",
+        "@local_ciq//:defs",
+        "@local_ciq//sdk:defs",
+    ],
+)
+
+stardoc(
+    name = "defs",
+    out = "defs.md",
+    func_template = "//stardoc/templates:func.vm",
+    input = "//:defs.bzl",
+    rule_template = "//stardoc/templates:rule.vm",
+    deps = [":defs_lib"],
+)
+
+bzl_library(
+    name = "macros_lib",
+    srcs = ["//:macros.bzl"],
+    deps = [
+        ":defs_lib",
+        "@local_ciq//:defs",
+    ],
+)
+
+stardoc(
+    name = "macros",
+    out = "macros.md",
+    func_template = "//stardoc/templates:func.vm",
+    input = "//:macros.bzl",
+    rule_template = "//stardoc/templates:rule.vm",
+    deps = [":macros_lib"],
+)

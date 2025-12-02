@@ -1,0 +1,124 @@
+"""Demonstrates the use of the available rules.
+
+Build a prg using:
+`bazel run //samples/all_rules:sample_device_build`
+
+Run interactive simulation using:
+`bazel run //samples/all_rules:sample_simulation`
+
+Run unit tests using:
+`bazel test //samples/all_rules:sample_test`
+
+Upload a prg to a physical connected device using:
+`bazel run //samples/all_rules:sample_device_upload`
+
+View the log file from a connected physical device using:
+`bazel run //samples/all_rules:sample_device_log_cat`
+
+Build an .iq file for export:
+`bazel run //samples/all_rules:sample_export`
+"""
+
+load(
+    "//:defs.bzl",
+    "ciq_device_build",
+    "ciq_device_log_cat",
+    "ciq_device_upload",
+    "ciq_export",
+    "ciq_jungle",
+    "ciq_manifest",
+    "ciq_project",
+    "ciq_scaled_drawable_jungle",
+    "ciq_simulation",
+    "ciq_test",
+)
+
+# Change this to build/simulate/test/upload for a specific device:
+DEVICE_ID = "fenix6"
+
+LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
+
+# Creates a jungle asset of static source and resource files for inclusion into
+# a project.
+ciq_jungle(
+    name = "sample_jungle",
+    resources = glob(["*.xml"]),
+    sources = glob(["*.mc"]),
+)
+
+# Creates a jungle asset of icon images scaled precisely for each device.
+ciq_scaled_drawable_jungle(
+    name = "icon_jungle",
+    src = "icon.png",
+    mode = "icon",
+    resource_id = LAUNCHER_ICON_RESOURCE_ID,
+)
+
+# Generates a manifest file for the application.
+# It's also possible to supply a manifest file directly to `ciq_project`, but
+# this `ciq_manifest` takes care of filtering devices based on app type and API
+# level.
+ciq_manifest(
+    name = "sample_manifest",
+    entry = "SampleApp",
+    id = "00000000-0000-0000-0000-000000000000",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = "SampleAppName",
+    type = "data_field",
+)
+
+# Collects the manifest file and jungle assets together.
+ciq_project(
+    name = "sample_project",
+    jungles = [
+        ":sample_jungle",
+        ":icon_jungle",
+    ],
+    manifest = ":sample_manifest",
+)
+
+# `bazel build` this target to build the project.
+# The outputs will be written into the bazel-bin directory.
+ciq_device_build(
+    name = "sample_device_build",
+    device_id = DEVICE_ID,
+    include_tests = True,
+    project = ":sample_project",
+)
+
+# `bazel run` this target to launch the simulator.
+# Or use `ibazel run` to automatically rebuild and re-run.
+ciq_simulation(
+    name = "sample_simulation",
+    device_build = ":sample_device_build",
+)
+
+# `bazel test` this target to run the unit tests.
+# Or use `ibazel run` to automatically rebuild and re-run.
+# Add the --test_output=streamed flag to also log output to the console.
+ciq_test(
+    name = "sample_test",
+    timeout = "short",
+    device_build = ":sample_device_build",
+)
+
+# `bazel run` this target to upload the .prg to a connected physical device.
+ciq_device_upload(
+    name = "sample_device_upload",
+    device_build = ":sample_device_build",
+)
+
+# `bazel run` this target to view the app log from a connected physical device.
+# You should see output after running the sample on a device (i.e. first place
+# the field in an activity).
+ciq_device_log_cat(
+    name = "sample_device_log_cat",
+    device_build = ":sample_device_build",
+)
+
+# `bazel build` this target to generate an .iq file for the Garmin CIQ store.
+ciq_export(
+    name = "sample_export",
+    project = ":sample_project",
+)

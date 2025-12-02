@@ -1,0 +1,4 @@
+exports_files([
+    "func.vm",
+    "rule.vm",
+])
