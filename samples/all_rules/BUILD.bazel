@@ -1,26 +1,26 @@
 """Demonstrates the use of the available rules.
 
 Build a prg using:
-`bazel run //samples/all_rules:sample_device_build`
+`bazel build @rules_ciq//samples/all_rules:sample_device_build`
 
 Run interactive simulation using:
-`bazel run //samples/all_rules:sample_simulation`
+`bazel run @rules_ciq//samples/all_rules:sample_simulation`
 
 Run unit tests using:
-`bazel test //samples/all_rules:sample_test`
+`bazel test @rules_ciq//samples/all_rules:sample_test`
 
 Upload a prg to a physical connected device using:
-`bazel run //samples/all_rules:sample_device_upload`
+`bazel run @rules_ciq//samples/all_rules:sample_device_upload`
 
 View the log file from a connected physical device using:
-`bazel run //samples/all_rules:sample_device_log_cat`
+`bazel run @rules_ciq//samples/all_rules:sample_device_log_cat`
 
 Build an .iq file for export:
-`bazel run //samples/all_rules:sample_export`
+`bazel build @rules_ciq//samples/all_rules:sample_export`
 """
 
 load(
-    "//:defs.bzl",
+    "@rules_ciq//:defs.bzl",
     "ciq_device_build",
     "ciq_device_log_cat",
     "ciq_device_upload",
