@@ -1,14 +1,14 @@
 """Demonstrates the use of build tools to generate device-specific resources.
 
 Portrait rectangular screen demo:
-`bazel run //samples/device_parametrics:sample_edge820_debug_simulation`
+`bazel run @rules_ciq//samples/device_parametrics:sample_edge820_debug_simulation`
 
 Landscape rectangular screen demo:
-`bazel run //samples/device_parametrics:sample_epix_debug_simulation`
+`bazel run @rules_ciq//samples/device_parametrics:sample_epix_debug_simulation`
 """
 
 load(
-    "//:defs.bzl",
+    "@rules_ciq//:defs.bzl",
     "ciq_jungle",
     "ciq_manifest",
     "ciq_project",
@@ -16,7 +16,7 @@ load(
     "devices",
     "supports_app_type",
 )
-load("//:macros.bzl", "device_targets_macro")
+load("@rules_ciq//:macros.bzl", "device_targets_macro")
 load(":helpers.bzl", "build_font_height_scaled_symbol_jungles", "device_parameterized_source_jungle")
 
 LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
