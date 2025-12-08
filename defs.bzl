@@ -29,9 +29,9 @@ _TYPE_CHECK_LEVELS = [
 _APP_TYPE_FORMATS = {
     "audio_content_provider": ["audio-content-provider-app", "audioContentProvider"],
     "data_field": ["datafield", "datafield"],
+    "watch_app": ["watch-app", "watchApp"],
     "watch_face": ["watchface", "watchFace"],
     "widget": ["widget", "widget"],
-    "watchApp": ["watch-app", "watchApp"],
 }
 
 def _filename_without_extension(file):
@@ -348,6 +348,8 @@ def supports_app_type(device_id, app_type):
     _manifest_xml_type, compiler_json_type = _APP_TYPE_FORMATS[app_type]
     for supported_app_type in devices[device_id]["compiler"]["appTypes"]:
         if supported_app_type["type"] == compiler_json_type:
+            return True
+        if compiler_json_type == "widget" and supported_app_type["type"] == "watchApp":
             return True
     return False
 
