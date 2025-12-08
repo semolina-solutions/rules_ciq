@@ -1,7 +1,7 @@
 """Macros for the device parametrics sample."""
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("//:defs.bzl", "ciq_scaled_drawable_jungle", "jungle_generator")
+load("@rules_ciq//:defs.bzl", "ciq_scaled_drawable_jungle", "jungle_generator")
 
 def build_font_height_scaled_symbol_jungles():
     """
