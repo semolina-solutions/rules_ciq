@@ -26,12 +26,18 @@ _TYPE_CHECK_LEVELS = [
 
 # Maps from preferred expression in this module to the two possible expressions
 # used in the manifest XML and compiler JSON.
+_APP_TYPE_AUDIO_CONTENT_PROVIDER = "audio_content_provider"
+_APP_TYPE_DATA_FIELD = "data_field"
+_APP_TYPE_WATCH_APP = "watch_app"
+_APP_TYPE_WATCH_FACE = "watch_face"
+_APP_TYPE_WIDGET = "widget"
+
 _APP_TYPE_FORMATS = {
-    "audio_content_provider": ["audio-content-provider-app", "audioContentProvider"],
-    "data_field": ["datafield", "datafield"],
-    "watch_app": ["watch-app", "watchApp"],
-    "watch_face": ["watchface", "watchFace"],
-    "widget": ["widget", "widget"],
+    _APP_TYPE_AUDIO_CONTENT_PROVIDER: ["audio-content-provider-app", "audioContentProvider"],
+    _APP_TYPE_DATA_FIELD: ["datafield", "datafield"],
+    _APP_TYPE_WATCH_APP: ["watch-app", "watchApp"],
+    _APP_TYPE_WATCH_FACE: ["watchface", "watchFace"],
+    _APP_TYPE_WIDGET: ["widget", "widget"],
 }
 
 def _filename_without_extension(file):
@@ -335,6 +341,22 @@ ciq_jungle = rule(
     },
 )
 
+def _check_app_type_exact(device_id, app_type):
+    """Checks if a device explicitly supports a specific app type in its compiler.json.
+
+    Args:
+        device_id: The device ID to check.
+        app_type: The application type to check for (e.g. "data_field").
+
+    Returns:
+        True if the device explicitly supports the specified app type, False otherwise.
+    """
+    _manifest_xml_type, compiler_json_type = _APP_TYPE_FORMATS[app_type]
+    for supported_app_type in devices[device_id]["compiler"]["appTypes"]:
+        if supported_app_type["type"] == compiler_json_type:
+            return True
+    return False
+
 def supports_app_type(device_id, app_type):
     """Checks if a device supports a specific app type.
 
@@ -345,12 +367,16 @@ def supports_app_type(device_id, app_type):
     Returns:
         True if the device supports the specified app type, False otherwise.
     """
-    _manifest_xml_type, compiler_json_type = _APP_TYPE_FORMATS[app_type]
-    for supported_app_type in devices[device_id]["compiler"]["appTypes"]:
-        if supported_app_type["type"] == compiler_json_type:
+    if _check_app_type_exact(device_id, app_type):
+        return True
+
+    # CIQ 4+ introduces "super apps", which coerce "widget" types into
+    # "watchApp" types. Thus, CIQ 4+ devices that support "watchApp" but
+    # not "widget" types should be considered to support "widget" types.
+    if app_type == _APP_TYPE_WIDGET and supports_min_sdk(device_id, "4.0.0"):
+        if _check_app_type_exact(device_id, _APP_TYPE_WATCH_APP):
             return True
-        if compiler_json_type == "widget" and supported_app_type["type"] == "watchApp":
-            return True
+
     return False
 
 def supports_min_sdk(device_id, min_api_level):
