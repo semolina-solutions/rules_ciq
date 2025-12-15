@@ -1,7 +1,7 @@
 //! Resizes an image to fit within specified dimensions while preserving aspect ratio.
 //!
 //! Usage:
-//!   scale_image <input_path> <output_path> <width> <height>
+//!   bazel run @rules_ciq//tools:scale_image <input_path> <output_path> <width> <height>
 //!
 //! This tool takes an input image and scales it so that it fits within the
 //! given `width` and `height`.

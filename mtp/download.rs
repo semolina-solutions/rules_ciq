@@ -1,10 +1,10 @@
 //! Downloads files from an MTP device.
 //!
 //! Usage:
-//!   download <device_path> <local_path> [<device_path> <local_path> ...]
+//!   bazel run @rules_ciq//mtp:download <device_path> <local_path> [<device_path> <local_path> ...]
 //!
 //! Example:
-//!   download /GARMIN/Apps/my_app.prg ./my_app.prg
+//!   bazel run @rules_ciq//mtp:download /GARMIN/Apps/my_app.prg ./my_app.prg
 //!
 //! This tool takes pairs of arguments: a source file path on the MTP device
 //! the device to the specified local paths.
