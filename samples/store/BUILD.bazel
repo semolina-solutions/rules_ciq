@@ -1,0 +1,16 @@
+"""Demonstrates how to build assets for the CIQ app store.
+
+Superimpose a simulator screenshot into a device background:
+`bazel build @rules_ciq//samples/store:hello_world_fenix6_framed_screenshot`
+"""
+
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_framed_screenshot",
+)
+
+ciq_framed_screenshot(
+    name = "hello_world_fenix6_framed_screenshot",
+    screenshot = ":hello_world_fenix6_screenshot.png",
+    device_id = "fenix6"
+)

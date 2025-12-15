@@ -957,3 +957,59 @@ ciq_device_log_cat = rule(
         ),
     },
 )
+
+def _ciq_framed_screenshot_impl(ctx):
+    device_id = ctx.attr.device_id
+
+    device_metadata = devices[device_id]
+    simulator = device_metadata["simulator"]
+    
+    display = simulator["display"]
+    x = display["location"]["x"]
+    y = display["location"]["y"]
+
+    image_filename = simulator["image"]
+    expected_path_suffix = "devices/{}/{}".format(device_id, image_filename)
+    
+    bg_file = [f for f in ctx.files._device_files if f.path.endswith(expected_path_suffix)][0]
+    output = ctx.actions.declare_file(ctx.label.name + ".png")
+    
+    ctx.actions.run(
+        inputs = [ctx.file.screenshot, bg_file],
+        outputs = [output],
+        executable = ctx.executable._frame_screenshot_tool,
+        arguments = [
+            bg_file.path,
+            ctx.file.screenshot.path,
+            str(x),
+            str(y),
+            output.path,
+        ],
+    )
+    
+    return [DefaultInfo(files = depset([output]))]
+
+ciq_framed_screenshot = rule(
+    implementation = _ciq_framed_screenshot_impl,
+    doc = "Superimposes a simulator screenshot into a device background image.",
+    attrs = {
+        "screenshot": attr.label(
+            doc = "The simulator screenshot image file.",
+            mandatory = True,
+            allow_single_file = True,
+        ),
+        "device_id": attr.string(
+            doc = "The device ID to simulate (e.g. 'fenix6').",
+            mandatory = True,
+        ),
+        "_frame_screenshot_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//tools:frame_screenshot"),
+        ),
+        "_device_files": attr.label(
+            default = Label("@local_ciq//:devices"),
+            allow_files = True,
+        ),
+    },
+)

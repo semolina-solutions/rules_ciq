@@ -83,6 +83,24 @@ Exports the application (.iq) for distribution.
 | <a id="ciq_export-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict). Default is 0.  | INT | false |  0  |
 
 
+<a id="ciq_framed_screenshot"></a>
+
+
+<pre>
+ciq_framed_screenshot(<a href="#ciq_framed_screenshot-name">name</a>, <a href="#ciq_framed_screenshot-device_id">device_id</a>, <a href="#ciq_framed_screenshot-screenshot">screenshot</a>)
+</pre>
+
+Superimposes a simulator screenshot into a device background image.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_framed_screenshot-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_framed_screenshot-device_id"></a>device_id |  The device ID to simulate (e.g. 'fenix6').  | STRING | true |    |
+| <a id="ciq_framed_screenshot-screenshot"></a>screenshot |  The simulator screenshot image file.  | LABEL | true |    |
+
+
 <a id="ciq_jungle"></a>
 
 
