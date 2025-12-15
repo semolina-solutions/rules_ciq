@@ -3,6 +3,15 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 package(default_visibility = ["//visibility:public"])
 
 rust_binary(
+    name = "frame_screenshot",
+    srcs = ["frame_screenshot.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)
+
+rust_binary(
     name = "get_application_id",
     srcs = ["get_application_id.rs"],
     deps = [

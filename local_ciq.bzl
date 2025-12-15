@@ -71,6 +71,12 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "devices",
+    srcs = glob(["devices/**/*"]),
+    visibility = ["//visibility:public"],
+)
+
 bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
@@ -138,6 +144,8 @@ def _local_ciq_impl(repository_ctx):
             "compiler": compiler_json,
             "simulator": simulator_json,
         }
+        
+        repository_ctx.symlink(device_dir, "devices/" + device_id)
 
     repository_ctx.file("defs.bzl", DEFS_CONTENT.format(
         devices = str(device_metadata_dict).replace("true", "True").replace("false", "False"),
