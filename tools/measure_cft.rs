@@ -1,7 +1,7 @@
 //! Measures the height of characters in a ConnectIQ Custom Font (CFT) file.
 //!
 //! Usage:
-//!   measure_cft <font_path>
+//!   bazel run @rules_ciq//tools:measure_cft <font_path>
 //!
 //! This tool reads the header of a `.cft` file to extract the font height.
 //! It expects the height to be a 16-bit big-endian integer located at offset 22.

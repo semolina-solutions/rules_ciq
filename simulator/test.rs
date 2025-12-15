@@ -1,7 +1,7 @@
 //! Runs the ConnectIQ simulator in test mode for a specific application.
 //!
 //! Usage:
-//!   test <simulator_path> <shell_path> <application_id> <prg_path> <settings_json_path> <device>
+//!   bazel run @rules_ciq//simulator:test <simulator_path> <shell_path> <application_id> <prg_path> <settings_json_path> <device>
 //!
 //! This tool performs the following steps:
 //! 1. Starts the ConnectIQ simulator.

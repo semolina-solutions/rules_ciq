@@ -1,10 +1,10 @@
 //! Uploads files to an MTP device.
 //!
 //! Usage:
-//!   upload <local_path> <device_path> [<local_path> <device_path> ...]
+//!   bazel run @rules_ciq//mtp:upload <local_path> <device_path> [<local_path> <device_path> ...]
 //!
 //! Example:
-//!   upload ./my_app.prg /GARMIN/Apps/my_app.prg
+//!   bazel run @rules_ciq//mtp:upload ./my_app.prg /GARMIN/Apps/my_app.prg
 //!
 //! This tool takes pairs of arguments: a source file path on the local
 //! the local filesystem to the specified paths on the device.

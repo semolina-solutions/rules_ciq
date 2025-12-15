@@ -1,7 +1,7 @@
 //! Extracts the application ID from a ConnectIQ manifest file.
 //!
 //! Usage:
-//!   get_application_id <manifest_xml_path>
+//!   bazel run @rules_ciq//tools:get_application_id <manifest_xml_path>
 //!
 //! This tool parses the provided `manifest.xml` file and prints the `id` attribute
 //! of the `iq:application` element to stdout.
