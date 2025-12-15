@@ -1,16 +1,16 @@
 import Toybox.Application;
 import Toybox.WatchUi;
 
-class SampleApp extends AppBase {
+class HelloWorldApp extends AppBase {
   function getInitialView() {
-    return [ new SampleDataField() ];
+    return [ new HelloWorldDataField() ];
   }
 }
 
-class SampleDataField extends SimpleDataField {
+class HelloWorldDataField extends SimpleDataField {
   function initialize() {
     SimpleDataField.initialize();
-    label = "sample";
+    label = "Hello World";
   }
 
   function compute(info) {

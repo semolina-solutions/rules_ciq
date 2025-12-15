@@ -58,8 +58,8 @@ containing the following reference to your CIQ developer key:
     ```
 
 1. Create a `BUILD.bazel` file for your project and declare targets using the
-rules provided by this repository. See the [`samples/all_rules`](samples/all_rules)
-project for a complete example. As a minimal demonstration, here is what to put in
+rules provided by this repository. See the[`samples/hello_world`](samples/hello_world)
+project for an introductory example. As a minimal demonstration, here is what to put in
 the `BUILD.bazel` file to generate an app manifest for a widget file:
 
     ```python

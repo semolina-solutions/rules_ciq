@@ -1,0 +1,63 @@
+"""Demonstrates how to declare and export a simple project.
+
+Build an .iq file for export:
+`bazel build @rules_ciq//samples/hello_world`
+"""
+
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_export",
+    "ciq_jungle",
+    "ciq_manifest",
+    "ciq_project",
+    "ciq_scaled_drawable_jungle",
+)
+
+LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
+
+# Creates a jungle asset of static source and resource files for inclusion into
+# a project.
+ciq_jungle(
+    name = "static_files",
+    resources = glob(["*.xml"]),
+    sources = glob(["*.mc"]),
+)
+
+# Creates a jungle asset of icon images scaled precisely for each device.
+ciq_scaled_drawable_jungle(
+    name = "scaled_icon",
+    src = "icon.png",
+    mode = "icon",
+    resource_id = LAUNCHER_ICON_RESOURCE_ID,
+)
+
+# Generates a manifest file for the application.
+# It's also possible to supply a manifest file directly to `ciq_project`, but
+# this `ciq_manifest` takes care of filtering devices based on app type and API
+# level.
+ciq_manifest(
+    name = "generated_manifest",
+    entry = "HelloWorldApp",
+    id = "00000000-0000-0000-0000-000000000000",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = "HelloWorldAppName",
+    type = "data_field",
+)
+
+# Collects the manifest file and jungle assets together.
+ciq_project(
+    name = "project",
+    jungles = [
+        ":static_files",
+        ":scaled_icon",
+    ],
+    manifest = ":generated_manifest",
+    visibility = ["//samples:__subpackages__"],
+)
+
+# `bazel build` this target to generate an .iq file for the Garmin CIQ store.
+ciq_export(
+    name = "hello_world",
+    project = ":project",
+)
