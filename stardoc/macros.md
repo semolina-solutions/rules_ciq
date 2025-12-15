@@ -15,9 +15,11 @@ For example, if `name` is "my_app" and `device_ids` includes "fenix6",
 the following debug and release targets will be generated:
 - `//path/to/package:my_app_fenix6_debug_build`
 - `//path/to/package:my_app_fenix6_debug_build_for_testing`
+- `//path/to/package:my_app_fenix6_debug_log_cat`
 - `//path/to/package:my_app_fenix6_debug_simulation`
 - `//path/to/package:my_app_fenix6_debug_upload`
 - `//path/to/package:my_app_fenix6_release_build`
+- `//path/to/package:my_app_fenix6_release_log_cat`
 - `//path/to/package:my_app_fenix6_release_simulation`
 - `//path/to/package:my_app_fenix6_release_upload`
 - `//path/to/package:my_app_fenix6_test`
