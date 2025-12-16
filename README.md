@@ -14,6 +14,7 @@ This repository provides [Bazel](https://bazel.build/) rules for building, simul
 *   **Device Deployment**: Upload applications to physical Garmin devices via MTP (Media Transfer Protocol).
 *   **Log Retrieval**: Fetch debug logs from physical devices.
 *   **Release Packaging**: Export `.iq` files for submission to the Connect IQ Store.
+*   **App Store Assets**: Generate device-framed screenshots and optimized animated GIFs for the Connect IQ Store.
 *   **Multi-Device Management**: Use macros to generate build, test, and simulation targets for multiple devices at once.
 
 ## Limitations
@@ -87,6 +88,16 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
     observe that all devices that support widgets and a minimum API level
     `3.0.0` are included.
 
+## Samples
+
+
+| Sample | Purpose |
+| --- | --- |
+| **[samples/hello_world](samples/hello_world)** | Introductory example demonstrating project structure, manifest generation, and `.iq` export. |
+| **[samples/simulator](samples/simulator)** | Demonstrates how to launch the simulator and run unit tests. |
+| **[samples/physical_device](samples/physical_device)** | Shows how to build for, upload to, and retrieve logs from a physical Garmin device. |
+| **[samples/device_parametrics](samples/device_parametrics)** | Illustrates how to generate device-specific resources like icons and backgrounds. |
+| **[samples/store](samples/store)** | Examples of generating store assets, including device-framed screenshots and animated GIFs. |
 
 ## Documentation
 
