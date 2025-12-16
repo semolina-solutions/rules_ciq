@@ -2,15 +2,45 @@
 
 Superimpose a simulator screenshot into a device background:
 `bazel build @rules_ciq//samples/store:hello_world_fenix6_framed_screenshot`
+
+Do the same as above, but crop to the screenshot itself:
+`bazel build @rules_ciq//samples/store:hello_world_fenix6_framed_screenshot_cropped`
+
+Generate an animated GIF that is quality-scaled to fit within the app store's size limit:
+`bazel build @rules_ciq//samples/store:hello_world_fenix6_animated_store_image`
 """
 
 load(
     "@rules_ciq//:defs.bzl",
     "ciq_framed_screenshot",
+    "ciq_store_image",
 )
 
+# Generates screenshot in the frame of a fenix6.
 ciq_framed_screenshot(
     name = "hello_world_fenix6_framed_screenshot",
-    screenshot = ":hello_world_fenix6_screenshot.png",
+    screenshot = "hello_world_fenix6_screenshot.png",
     device_id = "fenix6"
+)
+
+# Generates screenshot in the frame of a fenix6, cropped to the screenshot.
+ciq_framed_screenshot(
+    name = "hello_world_fenix6_framed_screenshot_cropped",
+    screenshot = "hello_world_fenix6_screenshot.png",
+    device_id = "fenix6",
+    crop = True,
+)
+
+# Generates an animated GIF with two frames, one static and one generated
+# from a simulator screenshot. The frames are displayed for 2s and 3s
+# respectively. The GIF is scaled to fit within the 150kb app store limit.
+# The first image sets the dimensions of the output image.
+ciq_store_image(
+    name = "hello_world_fenix6_animated_store_image",
+    images = [
+      "check_this_out.png",
+      ":hello_world_fenix6_framed_screenshot_cropped"
+    ],
+    max_size_kb = 150,
+    transition_millis = [2000, 3000],
 )
