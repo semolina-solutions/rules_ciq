@@ -563,6 +563,7 @@ DeviceBuildInfo = provider(
     "Provider for Garmin Connect IQ device build outputs.",
     fields = {
         "prg_file": "The compiled .prg file that can be run on the device or simulator.",
+        "prg_debug_xml_file": "The debug XML file generated during compilation.",
         "settings_json_file": "The settings JSON file generated during compilation.",
         "device_id": "The device ID this build was compiled for (e.g., 'fenix6').",
     },
@@ -635,6 +636,7 @@ def _ciq_device_build_impl(ctx):
         manifest_info,
         DeviceBuildInfo(
             prg_file = prg_file,
+            prg_debug_xml_file = prg_debug_xml_file,
             settings_json_file = settings_json_file,
             device_id = ctx.attr.device_id,
         ),
@@ -752,7 +754,7 @@ def _ciq_simulation_impl(ctx):
         GET_APPLICATION_ID_TOOL=$(rlocation {get_application_id_tool})
         MANIFEST_XML_PATH=$(rlocation {manifest_xml_path})
         APPLICATION_ID=$($GET_APPLICATION_ID_TOOL $MANIFEST_XML_PATH)
-        {simulator_tool} "{simulator_path}" "{shell_path}" "$APPLICATION_ID" "{prg_path}" "{settings_json_path}" {device_id}
+        {simulator_tool} "{simulator_path}" "{shell_path}" "$APPLICATION_ID" "{prg_path}" "{debug_xml_path}" "{settings_json_path}" {device_id}
     """
     ctx.actions.write(
         output = output_script,
@@ -764,6 +766,7 @@ def _ciq_simulation_impl(ctx):
             simulator_path = sdk_info.simulator_path,
             shell_path = sdk_info.shell_path,
             prg_path = device_build_info.prg_file.short_path,
+            debug_xml_path = device_build_info.prg_debug_xml_file.short_path,
             settings_json_path = device_build_info.settings_json_file.short_path,
             device_id = device_build_info.device_id,
         ),
@@ -776,6 +779,7 @@ def _ciq_simulation_impl(ctx):
                 files = [
                     output_script,
                     device_build_info.prg_file,
+                    device_build_info.prg_debug_xml_file,
                     device_build_info.settings_json_file,
                     manifest_info.manifest_file,
                     ctx.file._runfiles_script,

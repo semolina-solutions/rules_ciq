@@ -17,6 +17,7 @@ pub struct Args {
     pub shell_path: PathBuf,
     pub application_id: String,
     pub prg_path: PathBuf,
+    pub debug_xml_path: PathBuf,
     pub settings_json_path: PathBuf,
     pub device: String,
 }
@@ -163,6 +164,25 @@ where
             .await?;
         shell.wait_for("File pushed successfully", None).await?;
         shell.wait_for(":>", None).await?;
+
+        // Push Debug XML
+        if args.debug_xml_path.exists() {
+            let debug_xml_name = args
+                .debug_xml_path
+                .file_name()
+                .context("Invalid Debug XML path")?
+                .to_string_lossy();
+            
+            shell
+                .send(&format!(
+                    "push \"{}\" \"0:/GARMIN/Debug/{}\"",
+                    args.debug_xml_path.display(),
+                    debug_xml_name.to_uppercase()
+                ))
+                .await?;
+            shell.wait_for("File pushed successfully", None).await?;
+            shell.wait_for(":>", None).await?;
+        }
 
         // Push PRG
         let prg_name = args
