@@ -22,8 +22,8 @@ DEVICE_ID = "fenix6"
 ciq_device_build(
     name = "hello_world_device_build",
     device_id = DEVICE_ID,
-    include_tests = True,
     project = "@rules_ciq//samples/hello_world:project",
+    testing = True,  # Include tests in the build.
 )
 
 # `bazel run` this target to launch the simulator.

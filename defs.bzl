@@ -599,9 +599,15 @@ def _ciq_device_build_impl(ctx):
     prg_debug_xml_file = ctx.actions.declare_file(name + ".prg.debug.xml")
     settings_json_file = ctx.actions.declare_file(name + "-settings.json")
     fit_contributions_json_file = ctx.actions.declare_file(name + "-fit_contributions.json")
-    release_flag = "-r" if ctx.attr.release else ""
-    test_flag = "-t" if ctx.attr.include_tests else ""
-    type_check_level_flag = "-l {}".format(ctx.attr.type_check_level) if ctx.attr.type_check_level else ""
+    flags = []
+    if ctx.attr.release:
+        flags.append("-r")
+    if ctx.attr.testing:
+        flags.append("-t")
+    if ctx.attr.profiling:
+        flags.append("-k")
+    if ctx.attr.type_check_level:
+        flags.append("-l {}".format(ctx.attr.type_check_level))
     ctx.actions.run_shell(
         execution_requirements = {
             # Allows default.jungle to be written.
@@ -617,7 +623,7 @@ def _ciq_device_build_impl(ctx):
         command = """
       touch {settings_json} && \\
       touch {fit_contributions_json} && \\
-      "{executable}" -o "{prg}" -y "{key}" -d {device_id} -f "{jungles}" {release_flag} {test_flag} {type_check_level_flag}
+      "{executable}" -o "{prg}" -y "{key}" -d {device_id} -f "{jungles}" {flags}
     """.format(
             settings_json = settings_json_file.path,
             fit_contributions_json = fit_contributions_json_file.path,
@@ -626,9 +632,7 @@ def _ciq_device_build_impl(ctx):
             key = key_path,
             device_id = ctx.attr.device_id,
             jungles = ";".join([f.path for f in jungles_info.jungle_files]),
-            release_flag = release_flag,
-            test_flag = test_flag,
-            type_check_level_flag = type_check_level_flag,
+            flags = " ".join(flags),
         ),
     )
     return [
@@ -661,9 +665,6 @@ ciq_device_build = rule(
             providers = [ManifestInfo, JunglesInfo],
             allow_files = True,
         ),
-        "release": attr.bool(
-            doc = "Build in release mode (optimized, no debug symbols).",
-        ),
         "sdk": attr.label(
             doc = "Connect IQ SDK to use for compilation.",
             default = Label("@local_ciq//sdk:current"),
@@ -673,8 +674,14 @@ ciq_device_build = rule(
             doc = "Target device ID to build for (e.g., 'fenix6').",
             mandatory = True,
         ),
-        "include_tests": attr.bool(
-            doc = "Include test code in the build.",
+        "release": attr.bool(
+            doc = "Build in release mode (optimized, no debug symbols).",
+        ),
+        "testing": attr.bool(
+            doc = "Include tests in the build.",
+        ),
+        "profiling": attr.bool(
+            doc = "Enable profiling in the build.",
         ),
         "type_check_level": attr.int(
             doc = "Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict).",
