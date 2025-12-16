@@ -3,6 +3,15 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 package(default_visibility = ["//visibility:public"])
 
 rust_binary(
+    name = "compose_store_image",
+    srcs = ["compose_store_image.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)
+
+rust_binary(
     name = "frame_screenshot",
     srcs = ["frame_screenshot.rs"],
     deps = [

@@ -984,7 +984,7 @@ def _ciq_framed_screenshot_impl(ctx):
             str(x),
             str(y),
             output.path,
-        ],
+        ] + (["--crop-to-screenshot"] if ctx.attr.crop else []),
     )
     
     return [DefaultInfo(files = depset([output]))]
@@ -1002,6 +1002,10 @@ ciq_framed_screenshot = rule(
             doc = "The device ID to simulate (e.g. 'fenix6').",
             mandatory = True,
         ),
+        "crop": attr.bool(
+            doc = "If True, crops the output image to the dimensions of the screenshot with the background superimposed.",
+            default = False,
+        ),
         "_frame_screenshot_tool": attr.label(
             executable = True,
             cfg = "exec",
@@ -1013,3 +1017,86 @@ ciq_framed_screenshot = rule(
         ),
     },
 )
+
+def _ciq_store_image_impl(ctx):
+    if len(ctx.files.images) > 1:
+        extension = "gif"
+    else:
+        extension = ctx.files.images[0].extension
+
+    output_file = ctx.actions.declare_file(ctx.label.name + "." + extension)
+
+    args = ctx.actions.args()
+    args.add("--output-path", output_file)
+    args.add("--max-size-kb", str(ctx.attr.max_size_kb))
+
+    if ctx.attr.transition_millis:
+        for t in ctx.attr.transition_millis:
+            args.add("--transition-millis", str(t))
+
+    args.add("--")
+    args.add_all([f.path for f in ctx.files.images])
+
+    ctx.actions.run(
+        inputs = ctx.files.images,
+        outputs = [output_file],
+        executable = ctx.executable._compose_store_image_tool,
+        arguments = [args],
+    )
+
+    return [
+        DefaultInfo(
+            files = depset([output_file]),
+        ),
+    ]
+
+_ciq_store_image = rule(
+    implementation = _ciq_store_image_impl,
+    doc = "Private rule to generate a store image.",
+    attrs = {
+        "images": attr.label_list(
+            doc = "List of image files to compose.",
+            allow_files = True,
+            mandatory = True,
+        ),
+        "transition_millis": attr.int_list(
+            doc = "List of transition durations in milliseconds for the GIF.",
+        ),
+        "max_size_kb": attr.int(
+            doc = "Maximum size of the output image in kilobytes.",
+            mandatory = True,
+        ),
+        "_compose_store_image_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//tools:compose_store_image"),
+        ),
+    },
+)
+
+def ciq_store_image(name, images, max_size_kb, transition_millis = None, **kwargs):
+    """Generates a store image (GIF, PNG or JPG) from a list of files with size constraints.
+
+    Args:
+        name: The name of the target.
+        images: A list of image files to include. An animated GIF will be generated if more than one image is provided.
+        max_size_kb: The maximum allowed size for the output image in kilobytes.
+        transition_millis: Optional. A single integer or a list of integers representing transition durations in milliseconds.
+        **kwargs: Standard Bazel rule arguments (tags, visibility, etc.).
+    """
+    if transition_millis == None:
+        transition_millis_list = []
+    elif type(transition_millis) == "int":
+        transition_millis_list = [transition_millis]
+    elif type(transition_millis) == "list":
+        transition_millis_list = transition_millis
+    else:
+        fail("transition_millis must be an int or a list of ints")
+
+    _ciq_store_image(
+        name = name,
+        images = images,
+        transition_millis = transition_millis_list,
+        max_size_kb = max_size_kb,
+        **kwargs
+    )

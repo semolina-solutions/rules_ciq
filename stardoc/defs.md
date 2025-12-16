@@ -87,7 +87,7 @@ Exports the application (.iq) for distribution.
 
 
 <pre>
-ciq_framed_screenshot(<a href="#ciq_framed_screenshot-name">name</a>, <a href="#ciq_framed_screenshot-device_id">device_id</a>, <a href="#ciq_framed_screenshot-screenshot">screenshot</a>)
+ciq_framed_screenshot(<a href="#ciq_framed_screenshot-name">name</a>, <a href="#ciq_framed_screenshot-crop">crop</a>, <a href="#ciq_framed_screenshot-device_id">device_id</a>, <a href="#ciq_framed_screenshot-screenshot">screenshot</a>)
 </pre>
 
 Superimposes a simulator screenshot into a device background image.
@@ -97,6 +97,7 @@ Superimposes a simulator screenshot into a device background image.
 | Name | Description | Type | Mandatory | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_framed_screenshot-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_framed_screenshot-crop"></a>crop |  If True, crops the output image to the dimensions of the screenshot with the background superimposed.  | BOOLEAN | false |  False  |
 | <a id="ciq_framed_screenshot-device_id"></a>device_id |  The device ID to simulate (e.g. 'fenix6').  | STRING | true |    |
 | <a id="ciq_framed_screenshot-screenshot"></a>screenshot |  The simulator screenshot image file.  | LABEL | true |    |
 
@@ -276,6 +277,30 @@ Provider for Garmin Connect IQ manifest file.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="ManifestInfo-manifest_file"></a>manifest_file |  The manifest.xml file that defines the application metadata and supported devices.    |
+
+
+<a id="ciq_store_image"></a>
+
+
+<pre>
+ciq_store_image(<a href="#ciq_store_image-name">name</a>, <a href="#ciq_store_image-images">images</a>, <a href="#ciq_store_image-max_size_kb">max_size_kb</a>, <a href="#ciq_store_image-transition_millis">transition_millis</a>, <a href="#ciq_store_image-kwargs">kwargs</a>)
+</pre>
+
+Generates a store image (GIF, PNG or JPG) from a list of files with size constraints.
+
+**PARAMETERS**
+
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+| <a id="ciq_store_image-name"></a>name |  The name of the target.  |    |
+| <a id="ciq_store_image-images"></a>images |  A list of image files to include. An animated GIF will be generated if more than one image is provided.  |    |
+| <a id="ciq_store_image-max_size_kb"></a>max_size_kb |  The maximum allowed size for the output image in kilobytes.  |    |
+| <a id="ciq_store_image-transition_millis"></a>transition_millis |  Optional. A single integer or a list of integers representing transition durations in milliseconds.  |  None  |
+| <a id="ciq_store_image-kwargs"></a>kwargs |  Standard Bazel rule arguments (tags, visibility, etc.).  |    |
+
+**RETURNS**
+
+
 
 
 <a id="jungle_generator"></a>
