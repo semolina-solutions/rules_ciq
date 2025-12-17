@@ -14,21 +14,31 @@ Generates debug and release build, simulation, and upload targets for multiple d
 For example, if `name` is "my_app" and `device_ids` includes "fenix6",
 the following debug and release targets will be generated:
 - `//path/to/package:my_app_fenix6_debug_build`
+- `//path/to/package:my_app_fenix6_debug_profiling_build`
 - `//path/to/package:my_app_fenix6_debug_build_for_testing`
 - `//path/to/package:my_app_fenix6_debug_log_cat`
 - `//path/to/package:my_app_fenix6_debug_simulation`
 - `//path/to/package:my_app_fenix6_debug_upload`
+- `//path/to/package:my_app_fenix6_debug_profiling_upload`
 - `//path/to/package:my_app_fenix6_release_build`
+- `//path/to/package:my_app_fenix6_release_profiling_build`
 - `//path/to/package:my_app_fenix6_release_log_cat`
 - `//path/to/package:my_app_fenix6_release_simulation`
+- `//path/to/package:my_app_fenix6_release_profiling_simulation`
 - `//path/to/package:my_app_fenix6_release_upload`
+- `//path/to/package:my_app_fenix6_release_profiling_upload`
 - `//path/to/package:my_app_fenix6_test`
 
 These targets can be built or run using `bazel build` or `bazel run`.
 For example:
 - `bazel build //path/to/package:my_app_fenix6_debug_build`
 - `bazel run //path/to/package:my_app_fenix6_debug_simulation`
+- `bazel run //path/to/package:my_app_fenix6_debug_upload`
 - `bazel test //path/to/package:my_app_fenix6_test`
+
+Profiling note: The *_profiling_simulation targets ensure profiling is
+started along with the simulation, capturing startup execution. Profiling
+may otherwise be started manually when using any *_simulation target.
 
 
 **PARAMETERS**

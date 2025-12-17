@@ -12,7 +12,7 @@ This module defines custom Bazel rules for building Connect IQ projects, includi
 
 
 <pre>
-ciq_device_build(<a href="#ciq_device_build-name">name</a>, <a href="#ciq_device_build-device_id">device_id</a>, <a href="#ciq_device_build-include_tests">include_tests</a>, <a href="#ciq_device_build-project">project</a>, <a href="#ciq_device_build-release">release</a>, <a href="#ciq_device_build-sdk">sdk</a>, <a href="#ciq_device_build-type_check_level">type_check_level</a>)
+ciq_device_build(<a href="#ciq_device_build-name">name</a>, <a href="#ciq_device_build-device_id">device_id</a>, <a href="#ciq_device_build-profiling">profiling</a>, <a href="#ciq_device_build-project">project</a>, <a href="#ciq_device_build-release">release</a>, <a href="#ciq_device_build-sdk">sdk</a>, <a href="#ciq_device_build-testing">testing</a>, <a href="#ciq_device_build-type_check_level">type_check_level</a>)
 </pre>
 
 Builds the application (.prg) for a specific device.
@@ -23,10 +23,11 @@ Builds the application (.prg) for a specific device.
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_device_build-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_device_build-device_id"></a>device_id |  Target device ID to build for (e.g., 'fenix6').  | STRING | true |    |
-| <a id="ciq_device_build-include_tests"></a>include_tests |  Include test code in the build.  | BOOLEAN | false |  False  |
+| <a id="ciq_device_build-profiling"></a>profiling |  Enable profiling in the build.  | BOOLEAN | false |  False  |
 | <a id="ciq_device_build-project"></a>project |  The ciq_project target containing the manifest and jungle assets.  | LABEL | true |    |
 | <a id="ciq_device_build-release"></a>release |  Build in release mode (optimized, no debug symbols).  | BOOLEAN | false |  False  |
 | <a id="ciq_device_build-sdk"></a>sdk |  Connect IQ SDK to use for compilation.  | LABEL | false |  "@local_ciq//sdk:current"  |
+| <a id="ciq_device_build-testing"></a>testing |  Include tests in the build.  | BOOLEAN | false |  False  |
 | <a id="ciq_device_build-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict).  | INT | false |  0  |
 
 
@@ -227,7 +228,7 @@ Creates a script to run the application tests in the Connect IQ Simulator.
 <pre>
 load("@rules_ciq//:defs.bzl", "DeviceBuildInfo")
 
-DeviceBuildInfo(<a href="#DeviceBuildInfo-prg_file">prg_file</a>, <a href="#DeviceBuildInfo-settings_json_file">settings_json_file</a>, <a href="#DeviceBuildInfo-device_id">device_id</a>)
+DeviceBuildInfo(<a href="#DeviceBuildInfo-prg_file">prg_file</a>, <a href="#DeviceBuildInfo-prg_debug_xml_file">prg_debug_xml_file</a>, <a href="#DeviceBuildInfo-settings_json_file">settings_json_file</a>, <a href="#DeviceBuildInfo-device_id">device_id</a>)
 </pre>
 
 Provider for Garmin Connect IQ device build outputs.
@@ -237,6 +238,7 @@ Provider for Garmin Connect IQ device build outputs.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="DeviceBuildInfo-prg_file"></a>prg_file |  The compiled .prg file that can be run on the device or simulator.    |
+| <a id="DeviceBuildInfo-prg_debug_xml_file"></a>prg_debug_xml_file |  The debug XML file generated during compilation.    |
 | <a id="DeviceBuildInfo-settings_json_file"></a>settings_json_file |  The settings JSON file generated during compilation.    |
 | <a id="DeviceBuildInfo-device_id"></a>device_id |  The device ID this build was compiled for (e.g., 'fenix6').    |
 
