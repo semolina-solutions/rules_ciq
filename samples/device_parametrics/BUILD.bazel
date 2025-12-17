@@ -16,10 +16,27 @@ load(
     "devices",
     "supports_app_type",
 )
-load("@rules_ciq//:macros.bzl", "device_targets_macro")
+load("@rules_ciq//:macros.bzl", "ciq_device_targets_macro")
 load(":helpers.bzl", "build_font_height_scaled_symbol_jungles", "device_parameterized_source_jungle")
 
 LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
+
+ciq_manifest(
+    name = "sample_manifest",
+    entry = "SampleApp",
+    id = "00000000-0000-0000-0000-000000000001",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = "SampleAppName",
+    type = "widget",
+)
+
+# Static project files.
+ciq_jungle(
+    name = "sample_jungle",
+    resources = glob(["*.xml"]),
+    sources = glob(["*.mc"]),
+)
 
 # Generates device-specific scaled icons.
 ciq_scaled_drawable_jungle(
@@ -29,7 +46,7 @@ ciq_scaled_drawable_jungle(
     resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
 
-# Generate device-specific scaled background images, scaled to fill the screen
+# Generates device-specific scaled background images, scaled to fill the screen
 # (the resulting image may overflow in width or height).
 ciq_scaled_drawable_jungle(
     name = "screen_filled_background",
@@ -48,7 +65,7 @@ ciq_scaled_drawable_jungle(
     resource_id = "WidthScaledLabel",
 )
 
-# Generate device-specific scaled label images, scaled to be 50% of the
+# Generates device-specific scaled label images, scaled to be 50% of the
 # screen's height.
 ciq_scaled_drawable_jungle(
     name = "screen_height_scaled_label",
@@ -63,24 +80,7 @@ device_parameterized_source_jungle(
     name = "device_parameterized_sources",
 )
 
-# Static project files.
-ciq_jungle(
-    name = "sample_jungle",
-    resources = glob(["*.xml"]),
-    sources = glob(["*.mc"]),
-)
-
-ciq_manifest(
-    name = "sample_manifest",
-    entry = "SampleApp",
-    id = "00000000-0000-0000-0000-000000000001",
-    launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
-    min_api_level = "1.0.0",
-    name_string_resource_id = "SampleAppName",
-    type = "widget",
-)
-
-# All jungles used in the project, included in the order they are listed.
+# A combination of static, device-specific and helper-generataed jungles.
 JUNGLES = [
     ":sample_jungle",
     ":scaled_icon",
@@ -97,14 +97,11 @@ ciq_project(
 )
 
 DEVICE_IDS_SUPPORTING_WIDGET = [
-    device_id
-    for device_id in devices
+    device_id for device_id in devices
     if supports_app_type(device_id, "widget")
 ]
 
-# Generates device-specific targets for the sample project. See macros.bzl for
-# more information.
-device_targets_macro(
+ciq_device_targets_macro(
     name = "sample",
     device_ids = DEVICE_IDS_SUPPORTING_WIDGET,
     project = ":sample_project",

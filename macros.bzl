@@ -23,7 +23,7 @@ _UPLOAD_TEMPLATE = "{name}_{device_id}_{mode}_upload"
 _PROFILING_UPLOAD_TEMPLATE = "{name}_{device_id}_{mode}_profiling_upload"
 _TEST_TEMPLATE = "{name}_{device_id}_test"
 
-def device_targets_macro(name, visibility = None, project = None, device_ids = devices.keys(), type_check_level = None):
+def ciq_device_targets_macro(name, visibility = None, project = None, device_ids = devices.keys(), type_check_level = None):
     """Generates debug and release build, simulation, and upload targets for multiple devices.
 
     For example, if `name` is "my_app" and `device_ids` includes "fenix6",

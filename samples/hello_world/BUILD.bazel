@@ -1,7 +1,23 @@
-"""Demonstrates how to declare and export a simple project.
+"""Demonstrates how to declare a simple project and perform typical tasks.
 
 Build an .iq file for export:
 `bazel build @rules_ciq//samples/hello_world`
+
+Some other things to try, assuming a "fenix6" device:
+
+    Simulate:
+    `bazel run @rules_ciq//samples/hello_world:hello_world_fenix6_debug_simulation`
+
+        If installed, try `ibazel run` to automatically rebuild and re-run.
+    
+    Run unit tests via the simulator:
+    `bazel test @rules_ciq//samples/hello_world:hello_world_fenix6_test`
+    
+        If installed, try `ibazel run` to automatically rebuild and re-run.
+        Add the --test_output=streamed flag to also log output to the console.
+
+    Upload to a physically-connected device:
+    `bazel run @rules_ciq//samples/hello_world:hello_world_fenix6_debug_upload`
 """
 
 load(
@@ -11,6 +27,12 @@ load(
     "ciq_manifest",
     "ciq_project",
     "ciq_scaled_drawable_jungle",
+    "devices",
+    "supports_app_type",
+)
+load(
+    "@rules_ciq//:macros.bzl",
+    "ciq_device_targets_macro",
 )
 
 LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
@@ -45,18 +67,38 @@ ciq_manifest(
     type = "data_field",
 )
 
+# All jungles used in the project, included in the order they are listed.
+JUNGLES = [
+    ":static_files",
+    ":scaled_icon",
+]
+
 # Collects the manifest file and jungle assets together.
 ciq_project(
     name = "project",
-    jungles = [
-        ":static_files",
-        ":scaled_icon",
-    ],
+    jungles = JUNGLES,
     manifest = ":generated_manifest",
-    visibility = ["//samples:__subpackages__"],
+)
+
+# Use Pythonic list comprehension to make a list of devices that support this
+# app type (data field). While not strictly necessary, this is used below by
+# the macro to restrict generated targets to those relevant to this app.
+DEVICE_IDS_SUPPORTING_DATA_FIELD = [
+    device_id for device_id in devices
+    if supports_app_type(device_id, "data_field")
+]
+
+# This macro generates A LOT of useful targets for building, simulating,
+# testing, and interacting with physical devices. All targets are prefixed
+# with the name of the macro (hello_world_*). See macros.bzl for details.
+ciq_device_targets_macro(
+    name = "hello_world",
+    project = ":project",
+    device_ids = DEVICE_IDS_SUPPORTING_DATA_FIELD,
 )
 
 # `bazel build` this target to generate an .iq file for the Garmin CIQ store.
+# It will run for quite a while.
 ciq_export(
     name = "hello_world",
     project = ":project",
