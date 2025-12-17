@@ -38,7 +38,7 @@ ciq_scaled_drawable_jungle(
 ciq_manifest(
     name = "generated_manifest",
     entry = "HelloWorldApp",
-    id = "00000000-0000-0000-0000-000000000000",
+    id = "00000000-0000-0000-0000-000000000001",
     launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
     min_api_level = "1.0.0",
     name_string_resource_id = "HelloWorldAppName",
