@@ -2,10 +2,17 @@
 
 load("@local_ciq//:defs.bzl", "devices")
 load(
-    ":defs.bzl",
+    "//build:defs.bzl",
     "ciq_device_build",
-    "ciq_device_log_cat",
-    "ciq_device_upload",
+)
+load(
+    "//device:defs.bzl",
+    "ciq_sideload_app",
+    "ciq_view_app_log",
+    "ciq_view_app_profiling",
+)
+load(
+    "//simulator:defs.bzl",
     "ciq_simulation",
     "ciq_test",
 )
@@ -16,39 +23,43 @@ _MODE_RELEASE = "release"
 _BUILD_TEMPLATE = "{name}_{device_id}_{mode}_build"
 _PROFILING_BUILD_TEMPLATE = "{name}_{device_id}_{mode}_profiling_build"
 _BUILD_FOR_TESTING_TEMPLATE = "{name}_{device_id}_{mode}_build_for_testing"
-_LOG_CAT_TEMPLATE = "{name}_{device_id}_{mode}_log_cat"
+_VIEW_APP_LOG_TEMPLATE = "{name}_{device_id}_{mode}_view_app_log"
+_VIEW_APP_PROFILING_TEMPLATE = "{name}_{device_id}_{mode}_view_app_profiling"
 _SIMULATION_TEMPLATE = "{name}_{device_id}_{mode}_simulation"
 _PROFILING_SIMULATION_TEMPLATE = "{name}_{device_id}_{mode}_profiling_simulation"
-_UPLOAD_TEMPLATE = "{name}_{device_id}_{mode}_upload"
-_PROFILING_UPLOAD_TEMPLATE = "{name}_{device_id}_{mode}_profiling_upload"
+_SIDELOAD_APP_TEMPLATE = "{name}_{device_id}_{mode}_sideload_app"
+_PROFILING_SIDELOAD_APP_TEMPLATE = "{name}_{device_id}_{mode}_profiling_sideload_app"
 _TEST_TEMPLATE = "{name}_{device_id}_test"
 
 def ciq_device_targets_macro(name, visibility = None, project = None, device_ids = devices.keys(), type_check_level = None):
-    """Generates debug and release build, simulation, and upload targets for multiple devices.
+    """Generates debug and release build, simulation, and device interaction targets for multiple devices.
 
     For example, if `name` is "my_app" and `device_ids` includes "fenix6",
-    the following debug and release targets will be generated:
-    - `//path/to/package:my_app_fenix6_debug_build`
-    - `//path/to/package:my_app_fenix6_debug_profiling_build`
-    - `//path/to/package:my_app_fenix6_debug_build_for_testing`
-    - `//path/to/package:my_app_fenix6_debug_log_cat`
-    - `//path/to/package:my_app_fenix6_debug_simulation`
-    - `//path/to/package:my_app_fenix6_debug_upload`
-    - `//path/to/package:my_app_fenix6_debug_profiling_upload`
-    - `//path/to/package:my_app_fenix6_release_build`
-    - `//path/to/package:my_app_fenix6_release_profiling_build`
-    - `//path/to/package:my_app_fenix6_release_log_cat`
-    - `//path/to/package:my_app_fenix6_release_simulation`
-    - `//path/to/package:my_app_fenix6_release_profiling_simulation`
-    - `//path/to/package:my_app_fenix6_release_upload`
-    - `//path/to/package:my_app_fenix6_release_profiling_upload`
-    - `//path/to/package:my_app_fenix6_test`
+    the following targets will be generated:
+    - `//path/to/package:my_app_fenix6_debug_build` (build)
+    - `//path/to/package:my_app_fenix6_debug_build_for_testing` (build)
+    - `//path/to/package:my_app_fenix6_debug_profiling_build` (build)
+    - `//path/to/package:my_app_fenix6_debug_profiling_sideload_app` (run)
+    - `//path/to/package:my_app_fenix6_debug_profiling_simulation` (run)
+    - `//path/to/package:my_app_fenix6_debug_sideload_app` (run)
+    - `//path/to/package:my_app_fenix6_debug_simulation` (run)
+    - `//path/to/package:my_app_fenix6_debug_view_app_log` (run)
+    - `//path/to/package:my_app_fenix6_debug_view_app_profiling` (run)
+    - `//path/to/package:my_app_fenix6_release_build` (build)
+    - `//path/to/package:my_app_fenix6_release_profiling_build` (build)
+    - `//path/to/package:my_app_fenix6_release_profiling_sideload_app` (run)
+    - `//path/to/package:my_app_fenix6_release_profiling_simulation` (run)
+    - `//path/to/package:my_app_fenix6_release_sideload_app` (run)
+    - `//path/to/package:my_app_fenix6_release_simulation` (run)
+    - `//path/to/package:my_app_fenix6_release_view_app_log` (run)
+    - `//path/to/package:my_app_fenix6_release_view_app_profiling` (run)
+    - `//path/to/package:my_app_fenix6_test` (test)
 
     These targets can be built or run using `bazel build` or `bazel run`.
     For example:
     - `bazel build //path/to/package:my_app_fenix6_debug_build`
     - `bazel run //path/to/package:my_app_fenix6_debug_simulation`
-    - `bazel run //path/to/package:my_app_fenix6_debug_upload`
+    - `bazel run //path/to/package:my_app_fenix6_debug_sideload_app`
     - `bazel test //path/to/package:my_app_fenix6_test`
 
     Profiling note: The *_profiling_simulation targets ensure profiling is
@@ -87,9 +98,9 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 visibility = visibility,
             )
 
-            # Log cat
-            ciq_device_log_cat(
-                name = _LOG_CAT_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
+            # View App Log
+            ciq_view_app_log(
+                name = _VIEW_APP_LOG_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 visibility = visibility,
             )
@@ -108,16 +119,23 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 visibility = visibility,
             )
 
-            # Upload
-            ciq_device_upload(
-                name = _UPLOAD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
+            # Sideload App
+            ciq_sideload_app(
+                name = _SIDELOAD_APP_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 visibility = visibility,
             )
             
-            # Upload (profiling)
-            ciq_device_upload(
-                name = _PROFILING_UPLOAD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
+            # Sideload App (profiling)
+            ciq_sideload_app(
+                name = _PROFILING_SIDELOAD_APP_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
+                device_build = _PROFILING_BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
+                visibility = visibility,
+            )
+
+            # View App Profiling (using the profiling build)
+            ciq_view_app_profiling(
+                name = _VIEW_APP_PROFILING_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _PROFILING_BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 visibility = visibility,
             )

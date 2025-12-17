@@ -1,22 +1,19 @@
+"""
+Defines build tools and rules for Garmin Connect IQ projects.
+"""
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-rust_binary(
-    name = "compose_store_image",
-    srcs = ["compose_store_image.rs"],
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
     deps = [
-        "@crates//:clap",
-        "@crates//:image",
-    ],
-)
-
-rust_binary(
-    name = "frame_screenshot",
-    srcs = ["frame_screenshot.rs"],
-    deps = [
-        "@crates//:clap",
-        "@crates//:image",
+        "@bazel_skylib//lib:paths",
+        "@local_ciq//:defs",
+        "@local_ciq//sdk:defs",
     ],
 )
 

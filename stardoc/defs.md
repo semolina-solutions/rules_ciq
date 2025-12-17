@@ -1,12 +1,9 @@
 <!-- Generated with Stardoc: http://skydoc.bazel.build -->
 
-Bazel rules and providers for building Garmin Connect IQ applications.
+Public API for rules_ciq.
 
-This module defines custom Bazel rules for building Connect IQ projects, including:
-- Jungle file generation for device-specific resources and sources
-- Manifest generation with device filtering based on API level and app type
-- Device builds and exports using the MonkeyC compiler
-- Simulator support for testing applications
+This module re-exports rules and providers from the various sub-packages
+(build, device, simulator, store) for convenience.
 
 <a id="ciq_device_build"></a>
 
@@ -29,40 +26,6 @@ Builds the application (.prg) for a specific device.
 | <a id="ciq_device_build-sdk"></a>sdk |  Connect IQ SDK to use for compilation.  | LABEL | false |  "@local_ciq//sdk:current"  |
 | <a id="ciq_device_build-testing"></a>testing |  Include tests in the build.  | BOOLEAN | false |  False  |
 | <a id="ciq_device_build-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict).  | INT | false |  0  |
-
-
-<a id="ciq_device_log_cat"></a>
-
-
-<pre>
-ciq_device_log_cat(<a href="#ciq_device_log_cat-name">name</a>, <a href="#ciq_device_log_cat-device_build">device_build</a>)
-</pre>
-
-Downloads and outputs the log file from a connected physical Garmin device.
-
-**ATTRIBUTES**
-
-| Name | Description | Type | Mandatory | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| <a id="ciq_device_log_cat-name"></a>name |  A unique name for this target.  | NAME | true |    |
-| <a id="ciq_device_log_cat-device_build"></a>device_build |  The ciq_device_build target to retrieve the log file for.  | LABEL | true |    |
-
-
-<a id="ciq_device_upload"></a>
-
-
-<pre>
-ciq_device_upload(<a href="#ciq_device_upload-name">name</a>, <a href="#ciq_device_upload-device_build">device_build</a>)
-</pre>
-
-Uploads the application (.prg) to a connected physical Garmin device via MTP.
-
-**ATTRIBUTES**
-
-| Name | Description | Type | Mandatory | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| <a id="ciq_device_upload-name"></a>name |  A unique name for this target.  | NAME | true |    |
-| <a id="ciq_device_upload-device_build"></a>device_build |  The ciq_device_build target to upload.  | LABEL | true |    |
 
 
 <a id="ciq_export"></a>
@@ -187,6 +150,23 @@ Generates a jungle file for a scaled drawable resource.
 | <a id="ciq_scaled_drawable_jungle-resource_id"></a>resource_id |  Resource ID to use in the generated drawables.xml file.  | STRING | true |    |
 
 
+<a id="ciq_sideload_app"></a>
+
+
+<pre>
+ciq_sideload_app(<a href="#ciq_sideload_app-name">name</a>, <a href="#ciq_sideload_app-device_build">device_build</a>)
+</pre>
+
+Sideloads the application (.prg) to a connected physical Garmin device via MTP.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_sideload_app-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_sideload_app-device_build"></a>device_build |  The ciq_device_build target to sideload.  | LABEL | true |    |
+
+
 <a id="ciq_simulation"></a>
 
 
@@ -219,6 +199,23 @@ Creates a script to run the application tests in the Connect IQ Simulator.
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_test-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_test-device_build"></a>device_build |  The ciq_device_build target (with include_tests=True) to test in the simulator.  | LABEL | true |    |
+
+
+<a id="ciq_view_app_log"></a>
+
+
+<pre>
+ciq_view_app_log(<a href="#ciq_view_app_log-name">name</a>, <a href="#ciq_view_app_log-device_build">device_build</a>)
+</pre>
+
+Downloads and outputs the log file from a connected physical Garmin device.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_view_app_log-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_view_app_log-device_build"></a>device_build |  The ciq_device_build target to retrieve the log file for.  | LABEL | true |    |
 
 
 <a id="DeviceBuildInfo"></a>

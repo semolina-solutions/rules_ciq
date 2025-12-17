@@ -13,6 +13,7 @@ This repository provides [Bazel](https://bazel.build/) rules for building, simul
 *   **Testing**: Run unit tests in the simulator (optionally with hot-reload).
 *   **Device Deployment**: Upload applications to physical Garmin devices via MTP (Media Transfer Protocol).
 *   **Log Retrieval**: Fetch debug logs from physical devices.
+*   **Performance Profiling**: Analyze device profiling logs generating statistical reports with call stack resolution.
 *   **Release Packaging**: Export `.iq` files for submission to the Connect IQ Store.
 *   **App Store Assets**: Generate device-framed screenshots and optimized animated GIFs for the Connect IQ Store.
 *   **Multi-Device Management**: Use macros to generate build, test, and simulation targets for multiple devices at once.
@@ -69,7 +70,7 @@ the `BUILD.bazel` file to generate an app manifest for a widget file:
     ciq_manifest(
         name = "my_manifest",
         entry = "MyApp",
-        id = "00000000-0000-0000-0000-000000000000",
+        id = "00000000-0000-0000-0000-000000000001",
         launcher_icon_drawable_resource_id = "MyLauncherIconResource",
         min_api_level = "3.0.0",
         name_string_resource_id = "MyAppNameResource",

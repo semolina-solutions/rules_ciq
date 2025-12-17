@@ -8,6 +8,10 @@ bzl_library(
         "@bazel_skylib//lib:paths",
         "@local_ciq//:defs",
         "@local_ciq//sdk:defs",
+        "//build:defs",
+        "//device:defs",
+        "//simulator:defs",
+        "//store:defs",
     ],
 )
 

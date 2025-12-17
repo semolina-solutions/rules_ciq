@@ -1,4 +1,21 @@
+"""
+Defines targets for interacting with physical Garmin devices.
+"""
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+exports_files(["defs.bzl"])
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//build:defs",
+        "@bazel_skylib//lib:paths",
+    ],
+)
 
 alias(
     name = "libmtp",
@@ -33,5 +50,16 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":lib",
+    ],
+)
+
+rust_binary(
+    name = "interpret_profiling_log",
+    srcs = ["interpret_profiling_log.rs"],
+    deps = [
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:prost",
+        "@crates//:xml",
     ],
 )
