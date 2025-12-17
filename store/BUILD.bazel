@@ -1,0 +1,34 @@
+"""
+Defines tools and rules for generating assets for the Garmin Connect IQ Store.
+"""
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    deps = [
+        "@local_ciq//:defs",
+    ],
+)
+
+rust_binary(
+    name = "compose_store_image",
+    srcs = ["compose_store_image.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)
+
+rust_binary(
+    name = "frame_screenshot",
+    srcs = ["frame_screenshot.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)

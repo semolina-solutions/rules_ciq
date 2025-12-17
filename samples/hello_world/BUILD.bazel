@@ -17,7 +17,7 @@ Some other things to try, assuming a "fenix6" device:
         Add the --test_output=streamed flag to also log output to the console.
 
     Upload to a physically-connected device:
-    `bazel run @rules_ciq//samples/hello_world:hello_world_fenix6_debug_upload`
+    `bazel run @rules_ciq//samples/hello_world:hello_world_fenix6_debug_sideload_app`
 """
 
 load(
