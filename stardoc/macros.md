@@ -2,11 +2,11 @@
 
 Macros for generating Connect IQ build, simulation, and upload targets for multiple devices.
 
-<a id="device_targets_macro"></a>
+<a id="ciq_device_targets_macro"></a>
 
 
 <pre>
-device_targets_macro(<a href="#device_targets_macro-name">name</a>, <a href="#device_targets_macro-visibility">visibility</a>, <a href="#device_targets_macro-project">project</a>, <a href="#device_targets_macro-device_ids">device_ids</a>, <a href="#device_targets_macro-type_check_level">type_check_level</a>)
+ciq_device_targets_macro(<a href="#ciq_device_targets_macro-name">name</a>, <a href="#ciq_device_targets_macro-visibility">visibility</a>, <a href="#ciq_device_targets_macro-project">project</a>, <a href="#ciq_device_targets_macro-device_ids">device_ids</a>, <a href="#ciq_device_targets_macro-type_check_level">type_check_level</a>)
 </pre>
 
 Generates debug and release build, simulation, and upload targets for multiple devices.
@@ -45,11 +45,11 @@ may otherwise be started manually when using any *_simulation target.
 
 | Name | Description | Default Value |
 | :--- | :--- | :--- |
-| <a id="device_targets_macro-name"></a>name |  Base name for the generated targets.  |    |
-| <a id="device_targets_macro-visibility"></a>visibility |  Visibility specification for the build targets.  |  None  |
-| <a id="device_targets_macro-project"></a>project |  The Connect IQ project to build.  |  None  |
-| <a id="device_targets_macro-device_ids"></a>device_ids |  List of device IDs to generate targets for. Defaults to all available devices.  |  *All devices*  |
-| <a id="device_targets_macro-type_check_level"></a>type_check_level |  Type check level for the build (0=Silent, 1=Gradual, 2=Informative, 3=Strict).  |  None  |
+| <a id="ciq_device_targets_macro-name"></a>name |  Base name for the generated targets.  |    |
+| <a id="ciq_device_targets_macro-visibility"></a>visibility |  Visibility specification for the build targets.  |  None  |
+| <a id="ciq_device_targets_macro-project"></a>project |  The Connect IQ project to build.  |  None  |
+| <a id="ciq_device_targets_macro-device_ids"></a>device_ids |  List of device IDs to generate targets for. Defaults to all available devices.  |  *All devices*  |
+| <a id="ciq_device_targets_macro-type_check_level"></a>type_check_level |  Type check level for the build (0=Silent, 1=Gradual, 2=Informative, 3=Strict).  |  None  |
 
 **RETURNS**
 

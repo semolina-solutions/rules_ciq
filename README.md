@@ -93,9 +93,7 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
 
 | Sample | Purpose |
 | --- | --- |
-| **[samples/hello_world](samples/hello_world)** | Introductory example demonstrating project structure, manifest generation, and `.iq` export. |
-| **[samples/simulator](samples/simulator)** | Demonstrates how to launch the simulator and run unit tests. |
-| **[samples/physical_device](samples/physical_device)** | Shows how to build for, upload to, and retrieve logs from a physical Garmin device. |
+| **[samples/hello_world](samples/hello_world)** | Introductory example demonstrating project structure, manifest generation, simulating, unit testing, uploading to physical devices, and `.iq` export. |
 | **[samples/device_parametrics](samples/device_parametrics)** | Illustrates how to generate device-specific resources like icons and backgrounds. |
 | **[samples/store](samples/store)** | Examples of generating store assets, including device-framed screenshots and animated GIFs. |
 
