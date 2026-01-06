@@ -127,52 +127,46 @@ _DRAWABLES_BITMAP_XML_TEMPLATE = """
 </drawables>
 """
 
-def _ciq_scaled_drawable_generator(ctx, device_id, device_metadata, _sources_dir, resources_dir):
-    compiler = device_metadata["compiler"]
+def _get_sdk_font_height(ctx, device_id, device_metadata):
+    """Calculates the SDK font height for a given device and font configuration.
 
-    fraction = ctx.attr.percent / 100.0
-    width = None
-    height = None
+    A "SDK font" is one of the fonts available in the SDK, e.g. "xtiny".
 
-    if ctx.attr.mode == "icon":
-        width = int(compiler["launcherIcon"]["width"] * fraction)
-        height = int(compiler["launcherIcon"]["height"] * fraction)
-    elif ctx.attr.mode == "screen_width":
-        width = int(compiler["resolution"]["width"] * fraction)
-        height = 0
-    elif ctx.attr.mode == "screen_height":
-        width = 0
-        height = int(compiler["resolution"]["height"] * fraction)
-    elif ctx.attr.mode == "screen_fill":
-        width = int(compiler["resolution"]["width"] * fraction)
-        height = int(compiler["resolution"]["height"] * fraction)
-    elif ctx.attr.mode == "font_height":
-        if len(ctx.attr.font_name) == 0:
-            fail("font_name must be specified")
-        simulator = device_metadata["simulator"]
-        matched_font_sets = [
-            font
-            for font in simulator["fonts"]
-            if font["fontSet"] == ctx.attr.font_set
-        ]
-        if len(matched_font_sets) != 1:
-            fail("Expected to find exactly 1 matching font set for device_id={}, set={}".format(
-                device_id,
-                ctx.attr.font_set,
-            ))
-        fonts = matched_font_sets[0]["fonts"]
-        matched_fonts = [
-            font
-            for font in fonts
-            if font["name"] == ctx.attr.font_name
-        ]
-        if len(matched_fonts) != 1:
-            fail("Expected to find exactly 1 matching font for device_id={}, set={}, name={}".format(
-                device_id,
-                ctx.attr.font_set,
-                ctx.attr.font_name,
-            ))
-        font = matched_fonts[0]
+    Returns:
+        The height in pixels (int) or a shell expression string to calculate it,
+        or None if the font configuration is invalid for the device.
+    """
+    if len(ctx.attr.sdk_font_name) == 0:
+        fail("sdk_font_name must be specified")
+    simulator = device_metadata["simulator"]
+    matched_font_sets = [
+        font
+        for font in simulator["fonts"]
+        if font["fontSet"] == ctx.attr.sdk_font_set
+    ]
+    if len(matched_font_sets) != 1:
+        fail("Expected to find exactly 1 matching font set for device_id={}, set={}".format(
+            device_id,
+            ctx.attr.sdk_font_set,
+        ))
+    fonts = matched_font_sets[0]["fonts"]
+    matched_fonts = [
+        font
+        for font in fonts
+        if font["name"] == ctx.attr.sdk_font_name
+    ]
+    if len(matched_fonts) != 1:
+        fail("Expected to find exactly 1 matching font for device_id={}, set={}, name={}".format(
+            device_id,
+            ctx.attr.sdk_font_set,
+            ctx.attr.sdk_font_name,
+        ))
+    font = matched_fonts[0]
+
+    if "type" in font and font["type"] == "ttf":
+        return int(font["size"] * simulator["ppi"] / 72)
+    else:
+        # Need to find the font file in _fonts
         matched_font_files = [
             file
             for file in ctx.attr._fonts.files.to_list()
@@ -180,24 +174,59 @@ def _ciq_scaled_drawable_generator(ctx, device_id, device_metadata, _sources_dir
         ]
         if len(matched_font_files) == 0:
             # Skip generation for devices with broken font references.
-            return None
-        font_file = matched_font_files[0]
+            print("WARNING: Could not find SDK font {} for device {}".format(
+                font,
+                device_id,
+            ))
+            return 10  # Dummy height
+        font_file_ref = matched_font_files[0]
+        return """$({tool} "{font_path}")""".format(
+            tool = ctx.executable._measure_cft_tool.path,
+            font_path = font_file_ref.path,
+        )
 
-        width = 0
-        if "type" in font and font["type"] == "ttf":
-            height = int(font["size"] * simulator["ppi"] / 72)
-        else:
-            height = """$({tool} "{font_path}")""".format(
-                tool = ctx.executable._measure_cft_tool.path,
-                font_path = font_file.path,
-            )
+def _ciq_scaled_drawable_generator(ctx, device_id, device_metadata, _sources_dir, resources_dir):
+    compiler = device_metadata["compiler"]
 
-    if width == None or height == None:
-        return None
+    width = None
+    height = None
+
+    if ctx.attr.mode == "icon":
+        width = compiler["launcherIcon"]["width"]
+        height = compiler["launcherIcon"]["height"]
+    elif ctx.attr.mode == "screen_width":
+        width = compiler["resolution"]["width"]
+    elif ctx.attr.mode == "screen_height":
+        height = compiler["resolution"]["height"]
+    elif ctx.attr.mode == "screen_fill":
+        width = compiler["resolution"]["width"]
+        height = compiler["resolution"]["height"]
+    elif ctx.attr.mode == "sdk_font_height":
+        height = _get_sdk_font_height(ctx, device_id, device_metadata)
 
     image_file = ctx.actions.declare_file(
         paths.join(resources_dir, ctx.file.src.basename),
     )
+
+    cmd_args = [
+        ctx.executable._scale_image_tool.path,
+        ctx.file.src.path,
+        image_file.path,
+    ]
+    if width != None:
+        cmd_args.insert(0, "UNSCALED_WIDTH={};".format(width))
+        cmd_args.insert(1, 'SCALED_WIDTH="$({tool} $UNSCALED_WIDTH {percent})";'.format(
+            tool = ctx.executable._scale_value_tool.path,
+            percent = ctx.attr.percent,
+        ))
+        cmd_args.append("--width $SCALED_WIDTH")
+    if height != None:
+        cmd_args.insert(0, "UNSCALED_HEIGHT={};".format(height))
+        cmd_args.insert(1, "SCALED_HEIGHT=$({tool} $UNSCALED_HEIGHT {percent});".format(
+            tool = ctx.executable._scale_value_tool.path,
+            percent = ctx.attr.percent,
+        ))
+        cmd_args.append("--height $SCALED_HEIGHT")
 
     ctx.actions.run_shell(
         inputs = [ctx.file.src] + ctx.attr._fonts.files.to_list(),
@@ -205,16 +234,9 @@ def _ciq_scaled_drawable_generator(ctx, device_id, device_metadata, _sources_dir
         tools = [
             ctx.executable._measure_cft_tool,
             ctx.executable._scale_image_tool,
+            ctx.executable._scale_value_tool,
         ],
-        command = """
-            {tool} "{input_path}" "{output_path}" {width} {height}
-        """.format(
-            tool = ctx.executable._scale_image_tool.path,
-            input_path = ctx.file.src.path,
-            output_path = image_file.path,
-            width = str(width),
-            height = str(height),
-        ),
+        command = " ".join(cmd_args),
     )
 
     drawables_xml_file = ctx.actions.declare_file(paths.join(resources_dir, "drawables.xml"))
@@ -245,15 +267,15 @@ ciq_scaled_drawable_jungle = rule(
             mandatory = True,
         ),
         "mode": attr.string(
-            doc = "Scaling mode: 'icon' (launcher icon size), 'screen_width', 'screen_height', 'screen_fill' (full screen), or 'font_height' (based on font metrics).",
+            doc = "Scaling mode: 'icon' (launcher icon size), 'screen_width', 'screen_height', 'screen_fill' (full screen), or 'sdk_font_height' (based on font metrics).",
             mandatory = True,
-            values = ["icon", "screen_width", "screen_height", "screen_fill", "font_height"],
+            values = ["icon", "screen_width", "screen_height", "screen_fill", "sdk_font_height"],
         ),
-        "font_name": attr.string(
-            doc = "Font name to use for 'font_height' mode. Required when mode is 'font_height'.",
+        "sdk_font_name": attr.string(
+            doc = "Font name to use for 'sdk_font_height' mode (e.g. 'xtiny'). Required when mode is 'sdk_font_height'.",
         ),
-        "font_set": attr.string(
-            doc = "Font set to use for 'font_height' mode (e.g., 'ww' for worldwide).",
+        "sdk_font_set": attr.string(
+            doc = "Font set to use for 'sdk_font_height' mode (e.g. 'ww' for worldwide).",
             default = "ww",
         ),
         "percent": attr.int(
@@ -276,6 +298,155 @@ ciq_scaled_drawable_jungle = rule(
             executable = True,
             cfg = "exec",
             default = Label("//build:scale_image"),
+        ),
+        "_scale_value_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//build:scale_value"),
+        ),
+    },
+)
+
+_FONTS_XML_TEMPLATE = """
+<fonts>
+    <font id="{id}" filename="{fnt_filename}" filter="" antialias="{antialias}" />
+</fonts>
+"""
+
+def _ciq_bmfont_generator(ctx, device_id, device_metadata, _sources_dir, resources_dir):
+    compiler = device_metadata["compiler"]
+
+    height = None
+    if ctx.attr.mode == "screen_minimum_dimension":
+        height = min(
+            compiler["resolution"]["height"],
+            compiler["resolution"]["width"],
+        )
+    elif ctx.attr.mode == "sdk_font_height":
+        height = _get_sdk_font_height(ctx, device_id, device_metadata)
+
+    output_base = paths.join(resources_dir, ctx.label.name)
+    output_fnt = ctx.actions.declare_file(output_base + ".fnt")
+    output_png = ctx.actions.declare_file(output_base + ".png")
+    output_fonts_xml = ctx.actions.declare_file(paths.join(resources_dir, "fonts.xml"))
+
+    cmd = [
+        "UNSCALED_HEIGHT={};".format(height),
+        "SCALED_HEIGHT={};".format("$({tool} $UNSCALED_HEIGHT {percent} --snap {snap})".format(
+            tool = ctx.executable._scale_value_tool.path,
+            percent = ctx.attr.percent,
+            snap = ctx.attr.snap,
+        )),
+        ctx.executable._generate_bmfont_tool.path,
+        ctx.file.font.path,
+        output_fnt.path[:-4],
+        "$SCALED_HEIGHT",
+    ]
+    if ctx.attr.chars:
+        cmd.append("--chars")
+        cmd.append('"{}"'.format(ctx.attr.chars))
+    if ctx.attr.reference_chars:
+        cmd.append("--reference-chars")
+        cmd.append('"{}"'.format(ctx.attr.reference_chars))
+    if ctx.attr.anti_alias:
+        cmd.append("--anti-alias")
+
+    inputs = [
+        ctx.file.font,
+        ctx.executable._measure_cft_tool,
+        ctx.executable._scale_value_tool,
+    ] + ctx.attr._fonts.files.to_list()
+    tools = [
+        ctx.executable._measure_cft_tool,
+        ctx.executable._scale_value_tool,
+        ctx.executable._generate_bmfont_tool,
+    ]
+
+    ctx.actions.run_shell(
+        inputs = inputs,
+        outputs = [output_fnt, output_png],
+        tools = tools,
+        command = " ".join(cmd),
+    )
+
+    ctx.actions.write(
+        output = output_fonts_xml,
+        content = _FONTS_XML_TEMPLATE.format(
+            id = ctx.attr.resource_id,
+            fnt_filename = output_fnt.basename,
+            antialias = "true" if ctx.attr.anti_alias else "false",
+        ),
+    )
+
+    return [output_fnt, output_png, output_fonts_xml]
+
+def _ciq_bmfont_jungle_impl(ctx):
+    return jungle_generator(ctx, _ciq_bmfont_generator, ctx.attr.device_ids)
+
+ciq_bmfont_jungle = rule(
+    implementation = _ciq_bmfont_jungle_impl,
+    doc = "Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font for specific devices.",
+    attrs = {
+        "font": attr.label(
+            doc = "Input font file (.ttf or .otf).",
+            allow_single_file = True,
+            mandatory = True,
+        ),
+        "resource_id": attr.string(
+            doc = "Resource ID to use in the generated fonts.xml file.",
+            mandatory = True,
+        ),
+        "chars": attr.string(
+            doc = "Characters to include in the font. Defaults to a standard ASCII set if unspecified.",
+        ),
+        "reference_chars": attr.string(
+            doc = "String of characters to use as a height reference for scaling. If unspecified, no additional scaling is applied.",
+        ),
+        "mode": attr.string(
+            doc = "Scaling mode: 'screen_minimum_dimension' or 'sdk_font_height'.",
+            mandatory = True,
+            values = ["screen_minimum_dimension", "sdk_font_height"],
+        ),
+        "sdk_font_name": attr.string(
+            doc = "Font name to use for 'sdk_font_height' mode (e.g. 'xtiny'). Required when mode is 'sdk_font_height'.",
+        ),
+        "sdk_font_set": attr.string(
+            doc = "Font set to use for 'sdk_font_height' mode (e.g. 'ww' for worldwide).",
+            default = "ww",
+        ),
+        "percent": attr.int(
+            doc = "Percentage of the base size to scale to (100 = original size).",
+            default = 100,
+        ),
+        "anti_alias": attr.bool(
+            doc = "Enable anti-aliasing.",
+            default = False,
+        ),
+        "snap": attr.int(
+            doc = "Pixel multiple to snap scaled font to.",
+            default = 1,
+        ),
+        "device_ids": attr.string_list(
+            doc = "List of device IDs to generate font resources for.",
+            default = devices.keys(),
+        ),
+        "_fonts": attr.label(
+            default = Label("@local_ciq//:fonts"),
+        ),
+        "_generate_bmfont_tool": attr.label(
+            default = Label("//build:generate_bmfont"),
+            executable = True,
+            cfg = "exec",
+        ),
+        "_measure_cft_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//build:measure_cft"),
+        ),
+        "_scale_value_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//build:scale_value"),
         ),
     },
 )

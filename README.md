@@ -8,6 +8,7 @@ This repository provides [Bazel](https://bazel.build/) rules for building, simul
 
 *   **Project Scaffolding**: Automatically generate `manifest.xml` and `jungle` files based on your build targets.
 *   **Resource Scaling**: Automatically scale drawable resources for different device resolutions and icon sizes.
+*   **Font Generation**: Automatically generate and scale bitmap fonts from TrueType/OpenType files, ensuring they match specific screen dimensions or native SDK font sizes.
 *   **Device Builds**: Build `.prg` application files for specific devices with type checking and optimization options.
 *   **Simulation**: Launch your application in the Connect IQ Simulator directly from the command line (optionally with hot-reload).
 *   **Testing**: Run unit tests in the simulator (optionally with hot-reload).
@@ -96,6 +97,7 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
 | --- | --- |
 | **[samples/hello_world](samples/hello_world)** | Introductory example demonstrating project structure, manifest generation, simulating, unit testing, uploading to physical devices, and `.iq` export. |
 | **[samples/device_parametrics](samples/device_parametrics)** | Illustrates how to generate device-specific resources like icons and backgrounds. |
+| **[samples/custom_font](samples/custom_font)** | Examples of generating custom bitmap fonts, including scaling relative to screen size or matching native SDK font heights. |
 | **[samples/store](samples/store)** | Examples of generating store assets, including device-framed screenshots and animated GIFs. |
 
 ## Documentation

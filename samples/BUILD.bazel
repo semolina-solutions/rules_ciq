@@ -1,1 +1,6 @@
 """Dummy BUILD file for samples directory."""
+
+exports_files(
+    ["icon.png"],
+    visibility = ["//samples:__subpackages__"],
+)

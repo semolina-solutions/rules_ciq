@@ -1,15 +1,16 @@
 //! Resizes an image to fit within specified dimensions while preserving aspect ratio.
 //!
 //! Usage:
-//!   bazel run @rules_ciq//tools:scale_image <input_path> <output_path> <width> <height>
+//!   bazel run @rules_ciq//tools:scale_image -- <input_path> <output_path> [--width <width>] [--height <height>]
 //!
 //! This tool takes an input image and scales it so that it fits within the
-//! given `width` and `height`.
+//! given `width` and/or `height`.
 //!
-//! - If one dimension is 0, the image is scaled based on the other dimension.
-//! - If both dimensions are non-zero, the image is scaled to fill the target
-//!   dimensions while maintaining its aspect ratio (cropping may occur when
-//!   rendered on the device).
+//! - If only one dimension is specified, the image is scaled based on that dimension
+//!   while preserving aspect ratio.
+//! - If both dimensions are specified, the image is scaled to fit within the
+//!   target dimensions while maintaining its aspect ratio (cropping may occur).
+//! - If neither dimension is specified, an error is returned.
 //!
 //! The output image is saved to `output_path`.
 
@@ -22,12 +23,20 @@ use std::path::PathBuf;
 struct Args {
     input_path: PathBuf,
     output_path: PathBuf,
-    width: u32,
-    height: u32,
+
+    #[clap(long)]
+    width: Option<u32>,
+
+    #[clap(long)]
+    height: Option<u32>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    if args.width.is_none() && args.height.is_none() {
+        return Err("At least one of --width or --height must be specified".into());
+    }
 
     let img = image::open(&args.input_path)?;
     let (old_width, old_height) = img.dimensions();
@@ -35,22 +44,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut width = args.width;
     let mut height = args.height;
 
-    if width != 0 && height != 0 {
-        // Scale the image to fill based on the aspect ratio of the original image.
-        if (width as f64 / old_width as f64) < (height as f64 / old_height as f64) {
-            width = 0;
+    // If both dimensions are provided, determine which one is the constraining dimension
+    // and unset the other so it can be recalculated based on aspect ratio.
+    if let (Some(w), Some(h)) = (width, height) {
+        if (w as f64 / old_width as f64) < (h as f64 / old_height as f64) {
+            width = None;
         } else {
-            height = 0;
+            height = None;
         }
     }
 
-    if width == 0 {
-        width = ((height as f64 * old_width as f64) / old_height as f64).round() as u32;
-    } else if height == 0 {
-        height = ((width as f64 * old_height as f64) / old_width as f64).round() as u32;
+    // Calculate the missing dimension
+    if width.is_none() {
+        let h = height.unwrap();
+        width = Some(((h as f64 * old_width as f64) / old_height as f64).round() as u32);
+    } else if height.is_none() {
+        let w = width.unwrap();
+        height = Some(((w as f64 * old_height as f64) / old_width as f64).round() as u32);
     }
 
-    let scaled_img = img.resize_exact(width, height, FilterType::Lanczos3);
+    let scaled_img = img.resize_exact(width.unwrap(), height.unwrap(), FilterType::Lanczos3);
 
     scaled_img.save(&args.output_path)?;
 

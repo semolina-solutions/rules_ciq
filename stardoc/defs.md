@@ -5,6 +5,33 @@ Public API for rules_ciq.
 This module re-exports rules and providers from the various sub-packages
 (build, device, simulator, store) for convenience.
 
+<a id="ciq_bmfont_jungle"></a>
+
+
+<pre>
+ciq_bmfont_jungle(<a href="#ciq_bmfont_jungle-name">name</a>, <a href="#ciq_bmfont_jungle-anti_alias">anti_alias</a>, <a href="#ciq_bmfont_jungle-chars">chars</a>, <a href="#ciq_bmfont_jungle-device_ids">device_ids</a>, <a href="#ciq_bmfont_jungle-font">font</a>, <a href="#ciq_bmfont_jungle-mode">mode</a>, <a href="#ciq_bmfont_jungle-percent">percent</a>, <a href="#ciq_bmfont_jungle-reference_chars">reference_chars</a>, <a href="#ciq_bmfont_jungle-resource_id">resource_id</a>, <a href="#ciq_bmfont_jungle-sdk_font_name">sdk_font_name</a>, <a href="#ciq_bmfont_jungle-sdk_font_set">sdk_font_set</a>, <a href="#ciq_bmfont_jungle-snap">snap</a>)
+</pre>
+
+Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font for specific devices.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_bmfont_jungle-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_bmfont_jungle-anti_alias"></a>anti_alias |  Enable anti-aliasing.  | BOOLEAN | false |  False  |
+| <a id="ciq_bmfont_jungle-chars"></a>chars |  Characters to include in the font. Defaults to a standard ASCII set if unspecified.  | STRING | false |  ""  |
+| <a id="ciq_bmfont_jungle-device_ids"></a>device_ids |  List of device IDs to generate font resources for.  | STRING_LIST | false |  *All devices*  |
+| <a id="ciq_bmfont_jungle-font"></a>font |  Input font file (.ttf or .otf).  | LABEL | true |    |
+| <a id="ciq_bmfont_jungle-mode"></a>mode |  Scaling mode: 'screen_minimum_dimension' or 'sdk_font_height'.  | STRING | true |    |
+| <a id="ciq_bmfont_jungle-percent"></a>percent |  Percentage of the base size to scale to (100 = original size).  | INT | false |  100  |
+| <a id="ciq_bmfont_jungle-reference_chars"></a>reference_chars |  String of characters to use as a height reference for scaling. If unspecified, no additional scaling is applied.  | STRING | false |  ""  |
+| <a id="ciq_bmfont_jungle-resource_id"></a>resource_id |  Resource ID to use in the generated fonts.xml file.  | STRING | true |    |
+| <a id="ciq_bmfont_jungle-sdk_font_name"></a>sdk_font_name |  Font name to use for 'sdk_font_height' mode (e.g. 'xtiny'). Required when mode is 'sdk_font_height'.  | STRING | false |  ""  |
+| <a id="ciq_bmfont_jungle-sdk_font_set"></a>sdk_font_set |  Font set to use for 'sdk_font_height' mode (e.g. 'ww' for worldwide).  | STRING | false |  "ww"  |
+| <a id="ciq_bmfont_jungle-snap"></a>snap |  Pixel multiple to snap scaled font to.  | INT | false |  1  |
+
+
 <a id="ciq_device_build"></a>
 
 
@@ -131,7 +158,7 @@ Defines a Connect IQ project, linking a manifest file with jungle files and reso
 
 
 <pre>
-ciq_scaled_drawable_jungle(<a href="#ciq_scaled_drawable_jungle-name">name</a>, <a href="#ciq_scaled_drawable_jungle-src">src</a>, <a href="#ciq_scaled_drawable_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_drawable_jungle-font_name">font_name</a>, <a href="#ciq_scaled_drawable_jungle-font_set">font_set</a>, <a href="#ciq_scaled_drawable_jungle-mode">mode</a>, <a href="#ciq_scaled_drawable_jungle-percent">percent</a>, <a href="#ciq_scaled_drawable_jungle-resource_id">resource_id</a>)
+ciq_scaled_drawable_jungle(<a href="#ciq_scaled_drawable_jungle-name">name</a>, <a href="#ciq_scaled_drawable_jungle-src">src</a>, <a href="#ciq_scaled_drawable_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_drawable_jungle-mode">mode</a>, <a href="#ciq_scaled_drawable_jungle-percent">percent</a>, <a href="#ciq_scaled_drawable_jungle-resource_id">resource_id</a>, <a href="#ciq_scaled_drawable_jungle-sdk_font_name">sdk_font_name</a>, <a href="#ciq_scaled_drawable_jungle-sdk_font_set">sdk_font_set</a>)
 </pre>
 
 Generates a jungle file for a scaled drawable resource.
@@ -143,11 +170,11 @@ Generates a jungle file for a scaled drawable resource.
 | <a id="ciq_scaled_drawable_jungle-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_scaled_drawable_jungle-src"></a>src |  Source image file to scale for different devices.  | LABEL | true |    |
 | <a id="ciq_scaled_drawable_jungle-device_ids"></a>device_ids |  List of device IDs to generate scaled resources for.  | STRING_LIST | false |  *All devices*  |
-| <a id="ciq_scaled_drawable_jungle-font_name"></a>font_name |  Font name to use for 'font_height' mode. Required when mode is 'font_height'.  | STRING | false |  ""  |
-| <a id="ciq_scaled_drawable_jungle-font_set"></a>font_set |  Font set to use for 'font_height' mode (e.g., 'ww' for worldwide).  | STRING | false |  "ww"  |
-| <a id="ciq_scaled_drawable_jungle-mode"></a>mode |  Scaling mode: 'icon' (launcher icon size), 'screen_width', 'screen_height', 'screen_fill' (full screen), or 'font_height' (based on font metrics).  | STRING | true |    |
+| <a id="ciq_scaled_drawable_jungle-mode"></a>mode |  Scaling mode: 'icon' (launcher icon size), 'screen_width', 'screen_height', 'screen_fill' (full screen), or 'sdk_font_height' (based on font metrics).  | STRING | true |    |
 | <a id="ciq_scaled_drawable_jungle-percent"></a>percent |  Percentage of the base size to scale to (100 = original size).  | INT | false |  100  |
 | <a id="ciq_scaled_drawable_jungle-resource_id"></a>resource_id |  Resource ID to use in the generated drawables.xml file.  | STRING | true |    |
+| <a id="ciq_scaled_drawable_jungle-sdk_font_name"></a>sdk_font_name |  Font name to use for 'sdk_font_height' mode (e.g. 'xtiny'). Required when mode is 'sdk_font_height'.  | STRING | false |  ""  |
+| <a id="ciq_scaled_drawable_jungle-sdk_font_set"></a>sdk_font_set |  Font set to use for 'sdk_font_height' mode (e.g. 'ww' for worldwide).  | STRING | false |  "ww"  |
 
 
 <a id="ciq_sideload_app"></a>
@@ -216,6 +243,23 @@ Downloads and outputs the log file from a connected physical Garmin device.
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_view_app_log-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_view_app_log-device_build"></a>device_build |  The ciq_device_build target to retrieve the log file for.  | LABEL | true |    |
+
+
+<a id="ciq_view_app_profiling"></a>
+
+
+<pre>
+ciq_view_app_profiling(<a href="#ciq_view_app_profiling-name">name</a>, <a href="#ciq_view_app_profiling-device_build">device_build</a>)
+</pre>
+
+Downloads the profiling log (.PRF) from the device and analyzes it using the debug XML.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_view_app_profiling-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_view_app_profiling-device_build"></a>device_build |  The ciq_device_build target to retrieve the profiling log for.  | LABEL | true |    |
 
 
 <a id="DeviceBuildInfo"></a>

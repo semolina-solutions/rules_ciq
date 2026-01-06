@@ -41,7 +41,7 @@ ciq_jungle(
 # Generates device-specific scaled icons.
 ciq_scaled_drawable_jungle(
     name = "scaled_icon",
-    src = ":icon.png",
+    src = "//samples:icon.png",
     mode = "icon",
     resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
@@ -97,7 +97,8 @@ ciq_project(
 )
 
 DEVICE_IDS_SUPPORTING_WIDGET = [
-    device_id for device_id in devices
+    device_id
+    for device_id in devices
     if supports_app_type(device_id, "widget")
 ]
 

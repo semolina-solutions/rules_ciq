@@ -48,7 +48,7 @@ ciq_jungle(
 # Creates a jungle asset of icon images scaled precisely for each device.
 ciq_scaled_drawable_jungle(
     name = "scaled_icon",
-    src = "icon.png",
+    src = "//samples:icon.png",
     mode = "icon",
     resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
@@ -84,7 +84,8 @@ ciq_project(
 # app type (data field). While not strictly necessary, this is used below by
 # the macro to restrict generated targets to those relevant to this app.
 DEVICE_IDS_SUPPORTING_DATA_FIELD = [
-    device_id for device_id in devices
+    device_id
+    for device_id in devices
     if supports_app_type(device_id, "data_field")
 ]
 
@@ -93,8 +94,8 @@ DEVICE_IDS_SUPPORTING_DATA_FIELD = [
 # with the name of the macro (hello_world_*). See macros.bzl for details.
 ciq_device_targets_macro(
     name = "hello_world",
-    project = ":project",
     device_ids = DEVICE_IDS_SUPPORTING_DATA_FIELD,
+    project = ":project",
 )
 
 # `bazel build` this target to generate an .iq file for the Garmin CIQ store.

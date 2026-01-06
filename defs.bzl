@@ -11,6 +11,7 @@ load(
     _DeviceBuildInfo = "DeviceBuildInfo",
     _JunglesInfo = "JunglesInfo",
     _ManifestInfo = "ManifestInfo",
+    _ciq_bmfont_jungle = "ciq_bmfont_jungle",
     _ciq_device_build = "ciq_device_build",
     _ciq_export = "ciq_export",
     _ciq_jungle = "ciq_jungle",
@@ -47,6 +48,7 @@ ManifestInfo = _ManifestInfo
 DeviceBuildInfo = _DeviceBuildInfo
 ciq_jungle = _ciq_jungle
 ciq_scaled_drawable_jungle = _ciq_scaled_drawable_jungle
+ciq_bmfont_jungle = _ciq_bmfont_jungle
 ciq_manifest = _ciq_manifest
 ciq_project = _ciq_project
 ciq_device_build = _ciq_device_build
