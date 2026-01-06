@@ -90,25 +90,25 @@ def jungle_generator(ctx, generator_func, device_ids = devices.keys()):
         generated_files = result
         outputs.extend(generated_files)
 
-        has_sources = False
-        has_resources = False
+        source_path = None
+        resource_path = None
 
         for f in generated_files:
-            if device_sources_dir in f.short_path:
-                has_sources = True
-            if device_resources_dir in f.short_path:
-                has_resources = True
+            if device_sources_dir in f.short_path and not source_path:
+                source_path = paths.relativize(f.dirname, jungle_file.dirname)
+            if device_resources_dir in f.short_path and not resource_path:
+                resource_path = paths.relativize(f.dirname, jungle_file.dirname)
 
-        if has_sources:
+        if source_path:
             jungle_content += "{id}.sourcePath = $({id}.sourcePath);{dir}\n".format(
                 id = device_id,
-                dir = device_sources_dir,
+                dir = source_path,
             )
 
-        if has_resources:
+        if resource_path:
             jungle_content += "{id}.resourcePath = $({id}.resourcePath);{dir}\n".format(
                 id = device_id,
-                dir = device_resources_dir,
+                dir = resource_path,
             )
 
     ctx.actions.write(jungle_file, jungle_content)
@@ -286,33 +286,51 @@ def _ciq_jungle_impl(ctx):
     jungle_file = ctx.actions.declare_file(ctx.label.name + ".jungle")
     outputs = [jungle_file]
     jungle_content = ""
+    sources_path = None
+    if ctx.files.sources:
+        sources_anchor = ctx.actions.declare_file(paths.join(sources_dir, ".anchor"))
+        outputs.append(sources_anchor)
+        ctx.actions.write(sources_anchor, "")
+        sources_path = paths.relativize(sources_anchor.dirname, jungle_file.dirname)
+
     for source_file in ctx.files.sources:
         symlinked_source_file = ctx.actions.declare_file(
-            paths.join(sources_dir, source_file.short_path),
+            paths.join(sources_dir, source_file.basename),
         )
         outputs.append(symlinked_source_file)
         ctx.actions.symlink(
             output = symlinked_source_file,
             target_file = source_file,
         )
+
+    resources_path = None
+    if ctx.files.resources:
+        resources_anchor = ctx.actions.declare_file(paths.join(resources_dir, ".anchor"))
+        outputs.append(resources_anchor)
+        ctx.actions.write(resources_anchor, "")
+        resources_path = paths.relativize(resources_anchor.dirname, jungle_file.dirname)
+
     for resource_file in ctx.files.resources:
         symlinked_resource_file = ctx.actions.declare_file(
-            paths.join(resources_dir, resource_file.short_path),
+            paths.join(resources_dir, resource_file.basename),
         )
         outputs.append(symlinked_resource_file)
         ctx.actions.symlink(
             output = symlinked_resource_file,
             target_file = resource_file,
         )
+
     for device_id in ctx.attr.device_ids:
-        jungle_content += "{id}.sourcePath = $({id}.sourcePath);{dir}\n".format(
-            id = device_id,
-            dir = sources_dir,
-        )
-        jungle_content += "{id}.resourcePath = $({id}.resourcePath);{dir}\n".format(
-            id = device_id,
-            dir = resources_dir,
-        )
+        if sources_path:
+            jungle_content += "{id}.sourcePath = $({id}.sourcePath);{dir}\n".format(
+                id = device_id,
+                dir = sources_path,
+            )
+        if resources_path:
+            jungle_content += "{id}.resourcePath = $({id}.resourcePath);{dir}\n".format(
+                id = device_id,
+                dir = resources_path,
+            )
     ctx.actions.write(jungle_file, jungle_content)
     return [
         JunglesInfo(jungle_files = [jungle_file]),
