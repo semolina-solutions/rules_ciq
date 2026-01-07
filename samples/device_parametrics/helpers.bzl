@@ -17,8 +17,7 @@ def build_font_height_scaled_symbol_jungles():
         ciq_scaled_drawable_jungle(
             name = name,
             src = ":symbol.png",
-            sdk_font_name = font,
-            mode = "sdk_font_height",
+            device_dependent_height = "//metrics:{}_font_height".format(font),
             resource_id = "FontHeightScaledSymbol_{}".format(font),
         )
     return targets

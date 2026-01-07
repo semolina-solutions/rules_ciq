@@ -8,10 +8,10 @@ Simulate:
 
 load(
     "@rules_ciq//:defs.bzl",
-    "ciq_bmfont_jungle",
     "ciq_jungle",
     "ciq_manifest",
     "ciq_project",
+    "ciq_scaled_bmfont_jungle",
     "ciq_scaled_drawable_jungle",
     "devices",
     "supports_app_type",
@@ -19,27 +19,26 @@ load(
 load("@rules_ciq//:macros.bzl", "ciq_device_targets_macro")
 
 # A custom font sized to 50% of the screen width or height, whichever is smaller.
-ciq_bmfont_jungle(
+ciq_scaled_bmfont_jungle(
     name = "screen_scaled_font",
     anti_alias = True,
     chars = "Hi",
+    device_dependent_height = "//metrics:screen_minimum_dimension",
     font = "Micro5/Micro5-Regular.ttf",
-    mode = "screen_minimum_dimension",
     percent = 50,
     reference_chars = "A",
     resource_id = "ScreenScaledFont",
 )
 
 # A custom font sized to SDK font "xtiny" but snapped to a multiple that matches the font.
-ciq_bmfont_jungle(
+ciq_scaled_bmfont_jungle(
     name = "xtiny_snapped_font",
     anti_alias = False,
     chars = "SNAPPED",
+    device_dependent_height = "//metrics:xtiny_font_height",
     font = "Micro5/Micro5-Regular.ttf",
-    mode = "sdk_font_height",
     reference_chars = "A",
     resource_id = "XtinySnappedFont",
-    sdk_font_name = "xtiny",
     snap = 5,
 )
 
@@ -64,7 +63,8 @@ ciq_jungle(
 ciq_scaled_drawable_jungle(
     name = "scaled_icon",
     src = "//samples:icon.png",
-    mode = "icon",
+    device_dependent_height = "//metrics:launcher_icon_height",
+    device_dependent_width = "//metrics:launcher_icon_width",
     resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
 

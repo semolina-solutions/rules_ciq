@@ -10,6 +10,7 @@ This module defines custom Bazel rules for building Connect IQ projects, includi
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@local_ciq//:defs.bzl", "devices")
 load("@local_ciq//sdk:defs.bzl", "SdkInfo")
+load("//metrics:defs.bzl", "DeviceDependentMetricInfo")
 
 # The environment variable name used to locate the developer key for signing.
 _CIQ_DEVELOPER_KEY_PATH_ENV_VAR = "CIQ_DEVELOPER_KEY_PATH"
@@ -36,17 +37,6 @@ _APP_TYPE_FORMATS = {
     _APP_TYPE_WATCH_FACE: ["watchface", "watchFace"],
     _APP_TYPE_WIDGET: ["widget", "widget"],
 }
-
-def _filename_without_extension(file):
-    """Extracts the filename without its extension from a file object.
-
-    Args:
-        file: A file object with a basename property
-
-    Returns:
-        The filename without extension (e.g., "somefont" from "somefont.cft")
-    """
-    return file.basename[0:file.basename.rindex(".")]
 
 JunglesInfo = provider(
     "Provider for jungle files used in Garmin Connect IQ projects.",
@@ -127,82 +117,18 @@ _DRAWABLES_BITMAP_XML_TEMPLATE = """
 </drawables>
 """
 
-def _get_sdk_font_height(ctx, device_id, device_metadata):
-    """Calculates the SDK font height for a given device and font configuration.
-
-    A "SDK font" is one of the fonts available in the SDK, e.g. "xtiny".
-
-    Returns:
-        The height in pixels (int) or a shell expression string to calculate it,
-        or None if the font configuration is invalid for the device.
-    """
-    if len(ctx.attr.sdk_font_name) == 0:
-        fail("sdk_font_name must be specified")
-    simulator = device_metadata["simulator"]
-    matched_font_sets = [
-        font
-        for font in simulator["fonts"]
-        if font["fontSet"] == ctx.attr.sdk_font_set
-    ]
-    if len(matched_font_sets) != 1:
-        fail("Expected to find exactly 1 matching font set for device_id={}, set={}".format(
-            device_id,
-            ctx.attr.sdk_font_set,
-        ))
-    fonts = matched_font_sets[0]["fonts"]
-    matched_fonts = [
-        font
-        for font in fonts
-        if font["name"] == ctx.attr.sdk_font_name
-    ]
-    if len(matched_fonts) != 1:
-        fail("Expected to find exactly 1 matching font for device_id={}, set={}, name={}".format(
-            device_id,
-            ctx.attr.sdk_font_set,
-            ctx.attr.sdk_font_name,
-        ))
-    font = matched_fonts[0]
-
-    if "type" in font and font["type"] == "ttf":
-        return int(font["size"] * simulator["ppi"] / 72)
-    else:
-        # Need to find the font file in _fonts
-        matched_font_files = [
-            file
-            for file in ctx.attr._fonts.files.to_list()
-            if _filename_without_extension(file) == font["filename"]
-        ]
-        if len(matched_font_files) == 0:
-            # Skip generation for devices with broken font references.
-            print("WARNING: Could not find SDK font {} for device {}".format(
-                font,
-                device_id,
-            ))
-            return 10  # Dummy height
-        font_file_ref = matched_font_files[0]
-        return """$({tool} "{font_path}")""".format(
-            tool = ctx.executable._measure_cft_tool.path,
-            font_path = font_file_ref.path,
-        )
-
-def _ciq_scaled_drawable_generator(ctx, device_id, device_metadata, _sources_dir, resources_dir):
-    compiler = device_metadata["compiler"]
-
+def _ciq_scaled_drawable_generator(ctx, device_id, _device_metadata, _sources_dir, resources_dir):
     width = None
     height = None
 
-    if ctx.attr.mode == "icon":
-        width = compiler["launcherIcon"]["width"]
-        height = compiler["launcherIcon"]["height"]
-    elif ctx.attr.mode == "screen_width":
-        width = compiler["resolution"]["width"]
-    elif ctx.attr.mode == "screen_height":
-        height = compiler["resolution"]["height"]
-    elif ctx.attr.mode == "screen_fill":
-        width = compiler["resolution"]["width"]
-        height = compiler["resolution"]["height"]
-    elif ctx.attr.mode == "sdk_font_height":
-        height = _get_sdk_font_height(ctx, device_id, device_metadata)
+    if ctx.attr.device_dependent_width:
+        width = ctx.attr.device_dependent_width[DeviceDependentMetricInfo].map.get(device_id)
+        if width == None:
+            return None
+    if ctx.attr.device_dependent_height:
+        height = ctx.attr.device_dependent_height[DeviceDependentMetricInfo].map.get(device_id)
+        if height == None:
+            return None
 
     image_file = ctx.actions.declare_file(
         paths.join(resources_dir, ctx.file.src.basename),
@@ -266,17 +192,13 @@ ciq_scaled_drawable_jungle = rule(
             doc = "Resource ID to use in the generated drawables.xml file.",
             mandatory = True,
         ),
-        "mode": attr.string(
-            doc = "Scaling mode: 'icon' (launcher icon size), 'screen_width', 'screen_height', 'screen_fill' (full screen), or 'sdk_font_height' (based on font metrics).",
-            mandatory = True,
-            values = ["icon", "screen_width", "screen_height", "screen_fill", "sdk_font_height"],
+        "device_dependent_width": attr.label(
+            doc = "Metric target to use for width scaling.",
+            providers = [DeviceDependentMetricInfo],
         ),
-        "sdk_font_name": attr.string(
-            doc = "Font name to use for 'sdk_font_height' mode (e.g. 'xtiny'). Required when mode is 'sdk_font_height'.",
-        ),
-        "sdk_font_set": attr.string(
-            doc = "Font set to use for 'sdk_font_height' mode (e.g. 'ww' for worldwide).",
-            default = "ww",
+        "device_dependent_height": attr.label(
+            doc = "Metric target to use for height scaling.",
+            providers = [DeviceDependentMetricInfo],
         ),
         "percent": attr.int(
             doc = "Percentage of the base size to scale to (100 = original size).",
@@ -313,17 +235,11 @@ _FONTS_XML_TEMPLATE = """
 </fonts>
 """
 
-def _ciq_bmfont_generator(ctx, device_id, device_metadata, _sources_dir, resources_dir):
-    compiler = device_metadata["compiler"]
-
-    height = None
-    if ctx.attr.mode == "screen_minimum_dimension":
-        height = min(
-            compiler["resolution"]["height"],
-            compiler["resolution"]["width"],
-        )
-    elif ctx.attr.mode == "sdk_font_height":
-        height = _get_sdk_font_height(ctx, device_id, device_metadata)
+def _ciq_bmfont_generator(ctx, device_id, _device_metadata, _sources_dir, resources_dir):
+    height = ctx.attr.device_dependent_height[DeviceDependentMetricInfo].map.get(device_id)
+    if height == None:
+        # No metric for this device, skip generation.
+        return None
 
     output_base = paths.join(resources_dir, ctx.label.name)
     output_fnt = ctx.actions.declare_file(output_base + ".fnt")
@@ -383,7 +299,7 @@ def _ciq_bmfont_generator(ctx, device_id, device_metadata, _sources_dir, resourc
 def _ciq_bmfont_jungle_impl(ctx):
     return jungle_generator(ctx, _ciq_bmfont_generator, ctx.attr.device_ids)
 
-ciq_bmfont_jungle = rule(
+ciq_scaled_bmfont_jungle = rule(
     implementation = _ciq_bmfont_jungle_impl,
     doc = "Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font for specific devices.",
     attrs = {
@@ -402,17 +318,10 @@ ciq_bmfont_jungle = rule(
         "reference_chars": attr.string(
             doc = "String of characters to use as a height reference for scaling. If unspecified, no additional scaling is applied.",
         ),
-        "mode": attr.string(
-            doc = "Scaling mode: 'screen_minimum_dimension' or 'sdk_font_height'.",
+        "device_dependent_height": attr.label(
+            doc = "Metric target to use for height scaling.",
             mandatory = True,
-            values = ["screen_minimum_dimension", "sdk_font_height"],
-        ),
-        "sdk_font_name": attr.string(
-            doc = "Font name to use for 'sdk_font_height' mode (e.g. 'xtiny'). Required when mode is 'sdk_font_height'.",
-        ),
-        "sdk_font_set": attr.string(
-            doc = "Font set to use for 'sdk_font_height' mode (e.g. 'ww' for worldwide).",
-            default = "ww",
+            providers = [DeviceDependentMetricInfo],
         ),
         "percent": attr.int(
             doc = "Percentage of the base size to scale to (100 = original size).",

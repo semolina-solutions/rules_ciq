@@ -1,0 +1,88 @@
+"""
+Common device-dependent metric targets.
+
+This package defines reusable metric targets that can be used by `ciq_scaled_drawable_jungle`
+and `ciq_scaled_bmfont_jungle` to scale resources based on device characteristics.
+"""
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load(":defs.bzl", "lookup_metric", "min_screen_dimension_metric", "sdk_font_metric")
+
+package(default_visibility = ["//visibility:public"])
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    deps = [
+        "@local_ciq//:defs",
+    ],
+)
+
+lookup_metric(
+    name = "screen_width",
+    key = "compiler.resolution.width",
+)
+
+lookup_metric(
+    name = "screen_height",
+    key = "compiler.resolution.height",
+)
+
+lookup_metric(
+    name = "launcher_icon_width",
+    key = "compiler.launcherIcon.width",
+)
+
+lookup_metric(
+    name = "launcher_icon_height",
+    key = "compiler.launcherIcon.height",
+)
+
+min_screen_dimension_metric(
+    name = "screen_minimum_dimension",
+)
+
+sdk_font_metric(
+    name = "xtiny_font_height",
+    sdk_font_name = "xtiny",
+)
+
+sdk_font_metric(
+    name = "tiny_font_height",
+    sdk_font_name = "tiny",
+)
+
+sdk_font_metric(
+    name = "small_font_height",
+    sdk_font_name = "small",
+)
+
+sdk_font_metric(
+    name = "medium_font_height",
+    sdk_font_name = "medium",
+)
+
+sdk_font_metric(
+    name = "large_font_height",
+    sdk_font_name = "large",
+)
+
+sdk_font_metric(
+    name = "number_mild_font_height",
+    sdk_font_name = "numberMild",
+)
+
+sdk_font_metric(
+    name = "number_medium_font_height",
+    sdk_font_name = "numberMedium",
+)
+
+sdk_font_metric(
+    name = "number_hot_font_height",
+    sdk_font_name = "numberHot",
+)
+
+sdk_font_metric(
+    name = "number_thai_hot_font_height",
+    sdk_font_name = "numberThaiHot",
+)

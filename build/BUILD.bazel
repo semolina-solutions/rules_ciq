@@ -11,6 +11,7 @@ bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
     deps = [
+        "//metrics:defs",
         "@bazel_skylib//lib:paths",
         "@local_ciq//:defs",
         "@local_ciq//sdk:defs",

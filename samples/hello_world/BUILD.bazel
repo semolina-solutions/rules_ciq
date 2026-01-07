@@ -49,7 +49,8 @@ ciq_jungle(
 ciq_scaled_drawable_jungle(
     name = "scaled_icon",
     src = "//samples:icon.png",
-    mode = "icon",
+    device_dependent_height = "//metrics:launcher_icon_height",
+    device_dependent_width = "//metrics:launcher_icon_width",
     resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
 

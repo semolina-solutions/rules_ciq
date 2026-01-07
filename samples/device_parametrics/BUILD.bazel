@@ -42,7 +42,8 @@ ciq_jungle(
 ciq_scaled_drawable_jungle(
     name = "scaled_icon",
     src = "//samples:icon.png",
-    mode = "icon",
+    device_dependent_height = "//metrics:launcher_icon_height",
+    device_dependent_width = "//metrics:launcher_icon_width",
     resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
 
@@ -51,7 +52,8 @@ ciq_scaled_drawable_jungle(
 ciq_scaled_drawable_jungle(
     name = "screen_filled_background",
     src = ":background.jpg",
-    mode = "screen_fill",
+    device_dependent_height = "//metrics:screen_height",
+    device_dependent_width = "//metrics:screen_width",
     resource_id = "Background",
 )
 
@@ -60,7 +62,7 @@ ciq_scaled_drawable_jungle(
 ciq_scaled_drawable_jungle(
     name = "screen_width_scaled_label",
     src = ":scaled_to_width.png",
-    mode = "screen_width",
+    device_dependent_width = "//metrics:screen_width",
     percent = 50,
     resource_id = "WidthScaledLabel",
 )
@@ -70,7 +72,7 @@ ciq_scaled_drawable_jungle(
 ciq_scaled_drawable_jungle(
     name = "screen_height_scaled_label",
     src = ":scaled_to_height.png",
-    mode = "screen_height",
+    device_dependent_height = "//metrics:screen_height",
     percent = 50,
     resource_id = "HeightScaledLabel",
 )
