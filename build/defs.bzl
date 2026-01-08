@@ -154,14 +154,19 @@ def _ciq_scaled_drawable_generator(ctx, device_id, _device_metadata, _sources_di
         ))
         cmd_args.append("--height $SCALED_HEIGHT")
 
+    metric_files = []
+    if ctx.attr.device_dependent_width:
+        metric_files.append(ctx.attr.device_dependent_width[DefaultInfo].files)
+    if ctx.attr.device_dependent_height:
+        metric_files.append(ctx.attr.device_dependent_height[DefaultInfo].files)
+
     ctx.actions.run_shell(
         inputs = [ctx.file.src] + ctx.attr._fonts.files.to_list(),
         outputs = [image_file],
         tools = [
-            ctx.executable._measure_cft_tool,
             ctx.executable._scale_image_tool,
             ctx.executable._scale_value_tool,
-        ],
+        ] + depset(transitive = metric_files).to_list(),
         command = " ".join(cmd_args),
     )
 
@@ -210,11 +215,6 @@ ciq_scaled_drawable_jungle = rule(
         ),
         "_fonts": attr.label(
             default = Label("@local_ciq//:fonts"),
-        ),
-        "_measure_cft_tool": attr.label(
-            executable = True,
-            cfg = "exec",
-            default = Label("//build:measure_cft"),
         ),
         "_scale_image_tool": attr.label(
             executable = True,
@@ -269,14 +269,12 @@ def _ciq_bmfont_generator(ctx, device_id, _device_metadata, _sources_dir, resour
 
     inputs = [
         ctx.file.font,
-        ctx.executable._measure_cft_tool,
         ctx.executable._scale_value_tool,
     ] + ctx.attr._fonts.files.to_list()
     tools = [
-        ctx.executable._measure_cft_tool,
         ctx.executable._scale_value_tool,
         ctx.executable._generate_bmfont_tool,
-    ]
+    ] + ctx.attr.device_dependent_height[DefaultInfo].files.to_list()
 
     ctx.actions.run_shell(
         inputs = inputs,
@@ -346,11 +344,6 @@ ciq_scaled_bmfont_jungle = rule(
             default = Label("//build:generate_bmfont"),
             executable = True,
             cfg = "exec",
-        ),
-        "_measure_cft_tool": attr.label(
-            executable = True,
-            cfg = "exec",
-            default = Label("//build:measure_cft"),
         ),
         "_scale_value_tool": attr.label(
             executable = True,

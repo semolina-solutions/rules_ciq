@@ -82,6 +82,8 @@ bzl_library(
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
 )
+
+exports_files(["devices.json"])
 """
 
 def _local_ciq_impl(repository_ctx):
@@ -144,12 +146,14 @@ def _local_ciq_impl(repository_ctx):
             "compiler": compiler_json,
             "simulator": simulator_json,
         }
-        
+
         repository_ctx.symlink(device_dir, "devices/" + device_id)
 
     repository_ctx.file("defs.bzl", DEFS_CONTENT.format(
         devices = str(device_metadata_dict).replace("true", "True").replace("false", "False"),
     ))
+
+    repository_ctx.file("devices.json", json.encode(device_metadata_dict))
 
 local_ciq = repository_rule(
     implementation = _local_ciq_impl,

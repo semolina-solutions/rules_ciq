@@ -69,9 +69,25 @@ crate.spec(
     package = "rectangle-pack",
     version = "0.4.2",
 )
+crate.spec(
+    features = ["derive"],
+    package = "serde",
+    version = "1.0",
+)
+crate.spec(
+    package = "serde_json",
+    version = "1.0",
+)
 crate.from_specs()
 use_repo(crate, "crates")
 
 local_ciq = use_repo_rule("//:local_ciq.bzl", "local_ciq")
 
 local_ciq(name = "local_ciq")
+
+product_data_api = use_repo_rule("//:product_data_api.bzl", "product_data_api")
+
+product_data_api(
+    name = "garmin_product_data",
+    devices_json = "@local_ciq//:devices.json",
+)

@@ -6,7 +6,8 @@ and `ciq_scaled_bmfont_jungle` to scale resources based on device characteristic
 """
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load(":defs.bzl", "lookup_metric", "min_screen_dimension_metric", "sdk_font_metric")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+load(":defs.bzl", "lookup_metric", "min_screen_dimension_metric", "ppi_metric", "sdk_font_metric")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -85,4 +86,35 @@ sdk_font_metric(
 sdk_font_metric(
     name = "number_thai_hot_font_height",
     sdk_font_name = "numberThaiHot",
+)
+
+ppi_metric(
+    name = "screen_ppi",
+)
+
+rust_binary(
+    name = "calculate_screen_ppi",
+    srcs = ["calculate_screen_ppi.rs"],
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:regex",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_binary(
+    name = "get_product_id",
+    srcs = ["get_product_id.rs"],
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
 )

@@ -11,10 +11,10 @@ DeviceDependentMetricInfo = provider(
     },
 )
 
-def _metric_impl(_ctx, value_map):
+def _metric_impl(_ctx, value_map, files = depset()):
     return [
         DeviceDependentMetricInfo(map = value_map),
-        DefaultInfo(),
+        DefaultInfo(files = files),
     ]
 
 def _lookup_nested(dictionary, key):
@@ -115,7 +115,10 @@ def _sdk_font_metric_impl(ctx):
         if val != None:
             value_map[device_id] = val
 
-    return _metric_impl(ctx, value_map)
+    tool_info = ctx.attr._measure_cft_tool[DefaultInfo]
+    files = depset(transitive = [tool_info.files, tool_info.default_runfiles.files])
+
+    return _metric_impl(ctx, value_map, files)
 
 sdk_font_metric = rule(
     implementation = _sdk_font_metric_impl,
@@ -128,6 +131,66 @@ sdk_font_metric = rule(
             executable = True,
             cfg = "exec",
             default = Label("//build:measure_cft"),
+        ),
+    },
+)
+
+def _ppi_metric_impl(ctx):
+    value_map = {}
+
+    for device_id, device_metadata in devices.items():
+        if device_id not in ctx.attr.device_ids:
+            continue
+
+        hardware_part_number = device_metadata["compiler"]["hardwarePartNumber"]
+
+        value_map[device_id] = "$({get_product_id_tool} {hardware_part_number} --products-json-paths {products} | xargs -I {{}} {calculate_screen_ppi_tool} {{}} --product-data-json-paths {product_data})".format(
+            hardware_part_number = hardware_part_number,
+            get_product_id_tool = ctx.executable._get_product_id_tool.path,
+            products = " ".join([p.path for p in ctx.files._products]),
+            calculate_screen_ppi_tool = ctx.executable._calculate_screen_ppi_tool.path,
+            product_data = " ".join([p.path for p in ctx.files._product_data]),
+        )
+
+    calculate_screen_ppi_tool_info = ctx.attr._calculate_screen_ppi_tool[DefaultInfo]
+    get_product_id_tool_info = ctx.attr._get_product_id_tool[DefaultInfo]
+    files = depset(
+        [ctx.file._devices_json] + ctx.files._products + ctx.files._product_data,
+        transitive = [
+            calculate_screen_ppi_tool_info.files,
+            calculate_screen_ppi_tool_info.default_runfiles.files,
+            get_product_id_tool_info.files,
+            get_product_id_tool_info.default_runfiles.files,
+        ],
+    )
+
+    return _metric_impl(ctx, value_map, files)
+
+ppi_metric = rule(
+    implementation = _ppi_metric_impl,
+    attrs = {
+        "device_ids": attr.string_list(default = devices.keys()),
+        "_devices_json": attr.label(
+            allow_single_file = True,
+            default = Label("@local_ciq//:devices.json"),
+        ),
+        "_products": attr.label(
+            allow_files = True,
+            default = Label("@garmin_product_data//:products"),
+        ),
+        "_product_data": attr.label(
+            allow_files = True,
+            default = Label("@garmin_product_data//:product_data"),
+        ),
+        "_calculate_screen_ppi_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//metrics:calculate_screen_ppi"),
+        ),
+        "_get_product_id_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//metrics:get_product_id"),
         ),
     },
 )

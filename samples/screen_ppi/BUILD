@@ -1,0 +1,75 @@
+"""Demonstrates how to to scale based on screen PPI.
+
+Assuming a "fenix6" device:
+
+Simulate:
+`bazel run @rules_ciq//samples/screen_ppi:sample_fenix6_debug_simulation`
+"""
+
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_jungle",
+    "ciq_manifest",
+    "ciq_project",
+    "ciq_scaled_drawable_jungle",
+    "devices",
+    "supports_app_type",
+)
+load("@rules_ciq//:macros.bzl", "ciq_device_targets_macro")
+
+LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
+
+ciq_manifest(
+    name = "sample_manifest",
+    entry = "SampleApp",
+    id = "db85a4ab-b29c-46dc-b2ca-4a9551d702d6",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = "SampleAppName",
+    type = "widget",
+)
+
+ciq_jungle(
+    name = "sample_jungle",
+    resources = glob(["*.xml"]),
+    sources = glob(["*.mc"]),
+)
+
+ciq_scaled_drawable_jungle(
+    name = "scaled_icon",
+    src = "//samples:icon.png",
+    device_dependent_height = "//metrics:launcher_icon_height",
+    device_dependent_width = "//metrics:launcher_icon_width",
+    resource_id = LAUNCHER_ICON_RESOURCE_ID,
+)
+
+# Create a drawable scaled to 1 inch in width on each device.
+ciq_scaled_drawable_jungle(
+    name = "inch",
+    src = "inch.png",
+    device_dependent_width = "//metrics:screen_ppi",
+    percent = 100,
+    resource_id = "Inch",
+)
+
+ciq_project(
+    name = "sample_project",
+    jungles = [
+        ":sample_jungle",
+        ":scaled_icon",
+        ":inch",
+    ],
+    manifest = ":sample_manifest",
+)
+
+DEVICE_IDS_SUPPORTING_WIDGET = [
+    device_id
+    for device_id in devices
+    if supports_app_type(device_id, "widget")
+]
+
+ciq_device_targets_macro(
+    name = "sample",
+    device_ids = DEVICE_IDS_SUPPORTING_WIDGET,
+    project = ":sample_project",
+)
