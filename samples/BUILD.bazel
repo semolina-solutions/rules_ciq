@@ -1,6 +1,28 @@
-"""Dummy BUILD file for samples directory."""
+"""Build targets used by the samples."""
 
-exports_files(
-    ["icon.png"],
-    visibility = ["//samples:__subpackages__"],
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_jungle",
+    "ciq_scaled_drawable_jungle",
+)
+load(
+    ":defs.bzl",
+    "LAUNCHER_ICON_DRAWABLE_RESOURCE_ID",
+)
+
+package(default_visibility = ["//samples:__subpackages__"])
+
+# Creates a jungle asset of icon images scaled precisely for each device.
+ciq_scaled_drawable_jungle(
+    name = "icon",
+    src = "icon.png",
+    device_dependent_height = "//metrics:launcher_icon_height",
+    device_dependent_width = "//metrics:launcher_icon_width",
+    resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
+)
+
+# Creates a jungle asset of files common to all samples.
+ciq_jungle(
+    name = "common_files",
+    resources = ["strings.xml"],
 )

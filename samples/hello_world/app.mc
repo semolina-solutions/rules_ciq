@@ -10,7 +10,7 @@ class HelloWorldApp extends AppBase {
 class HelloWorldDataField extends SimpleDataField {
   function initialize() {
     SimpleDataField.initialize();
-    label = "Hello World";
+    label = loadResource(Rez.Strings.Label);
   }
 
   function compute(info) {

@@ -98,6 +98,7 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
 | **[samples/hello_world](samples/hello_world)** | Introductory example demonstrating project structure, manifest generation, simulating, unit testing, uploading to physical devices, and `.iq` export. |
 | **[samples/device_parametrics](samples/device_parametrics)** | Illustrates how to generate device-specific resources like icons and backgrounds. |
 | **[samples/custom_font](samples/custom_font)** | Examples of generating custom bitmap fonts, including scaling relative to screen size or matching native SDK font heights. |
+| **[samples/screen_ppi](samples/screen_ppi)** | Demonstrates how to scale resources based on physical screen dimensions. |
 | **[samples/store](samples/store)** | Examples of generating store assets, including device-framed screenshots and animated GIFs. |
 
 ## Documentation

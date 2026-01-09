@@ -12,11 +12,15 @@ load(
     "ciq_manifest",
     "ciq_project",
     "ciq_scaled_bmfont_jungle",
-    "ciq_scaled_drawable_jungle",
     "devices",
     "supports_app_type",
 )
 load("@rules_ciq//:macros.bzl", "ciq_device_targets_macro")
+load(
+    "//samples:defs.bzl",
+    "LAUNCHER_ICON_DRAWABLE_RESOURCE_ID",
+    "NAME_STRING_RESOURCE_ID",
+)
 
 # A custom font sized to 50% of the screen width or height, whichever is smaller.
 ciq_scaled_bmfont_jungle(
@@ -42,37 +46,27 @@ ciq_scaled_bmfont_jungle(
     snap = 5,
 )
 
-LAUNCHER_ICON_RESOURCE_ID = "LauncherIcon"
-
 ciq_manifest(
     name = "sample_manifest",
     entry = "SampleApp",
-    id = "00000000-0000-0000-0000-000000000001",
-    launcher_icon_drawable_resource_id = LAUNCHER_ICON_RESOURCE_ID,
+    id = "f0fac0c8-ed78-42de-9f6f-f224f3cc00f2",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
     min_api_level = "1.0.0",
-    name_string_resource_id = "SampleAppName",
+    name_string_resource_id = NAME_STRING_RESOURCE_ID,
     type = "widget",
 )
 
 ciq_jungle(
     name = "sample_jungle",
-    resources = glob(["*.xml"]),
     sources = glob(["*.mc"]),
-)
-
-ciq_scaled_drawable_jungle(
-    name = "scaled_icon",
-    src = "//samples:icon.png",
-    device_dependent_height = "//metrics:launcher_icon_height",
-    device_dependent_width = "//metrics:launcher_icon_width",
-    resource_id = LAUNCHER_ICON_RESOURCE_ID,
 )
 
 ciq_project(
     name = "sample_project",
     jungles = [
+        "//samples:common_files",
+        "//samples:icon",
         ":sample_jungle",
-        ":scaled_icon",
         ":screen_scaled_font",
         ":xtiny_snapped_font",
     ],
