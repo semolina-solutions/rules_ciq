@@ -354,21 +354,25 @@ ciq_scaled_bmfont_jungle = rule(
 )
 
 def _ciq_jungle_impl(ctx):
-    sources_dir = paths.join(ctx.label.name, "sources")
-    resources_dir = paths.join(ctx.label.name, "resources")
     jungle_file = ctx.actions.declare_file(ctx.label.name + ".jungle")
     outputs = [jungle_file]
-    jungle_content = ""
-    sources_path = None
-    if ctx.files.sources:
-        sources_anchor = ctx.actions.declare_file(paths.join(sources_dir, ".anchor"))
-        outputs.append(sources_anchor)
-        ctx.actions.write(sources_anchor, "")
-        sources_path = paths.relativize(sources_anchor.dirname, jungle_file.dirname)
+
+    sources_dir_root = paths.join(ctx.label.name, "sources")
+    source_basenames = {}
+    root_source_path = None
 
     for source_file in ctx.files.sources:
+        basename = source_file.basename
+        count = source_basenames.get(basename, 0)
+        source_basenames[basename] = count + 1
+
+        if count == 0:
+            target_dir = sources_dir_root
+        else:
+            target_dir = paths.join(sources_dir_root, str(count))
+
         symlinked_source_file = ctx.actions.declare_file(
-            paths.join(sources_dir, source_file.basename),
+            paths.join(target_dir, basename),
         )
         outputs.append(symlinked_source_file)
         ctx.actions.symlink(
@@ -376,16 +380,25 @@ def _ciq_jungle_impl(ctx):
             target_file = source_file,
         )
 
-    resources_path = None
-    if ctx.files.resources:
-        resources_anchor = ctx.actions.declare_file(paths.join(resources_dir, ".anchor"))
-        outputs.append(resources_anchor)
-        ctx.actions.write(resources_anchor, "")
-        resources_path = paths.relativize(resources_anchor.dirname, jungle_file.dirname)
+        if count == 0:
+            root_source_path = paths.relativize(symlinked_source_file.dirname, jungle_file.dirname)
+
+    resources_dir_root = paths.join(ctx.label.name, "resources")
+    resource_basenames = {}
+    root_resource_path = None
 
     for resource_file in ctx.files.resources:
+        basename = resource_file.basename
+        count = resource_basenames.get(basename, 0)
+        resource_basenames[basename] = count + 1
+
+        if count == 0:
+            target_dir = resources_dir_root
+        else:
+            target_dir = paths.join(resources_dir_root, str(count))
+
         symlinked_resource_file = ctx.actions.declare_file(
-            paths.join(resources_dir, resource_file.basename),
+            paths.join(target_dir, basename),
         )
         outputs.append(symlinked_resource_file)
         ctx.actions.symlink(
@@ -393,18 +406,25 @@ def _ciq_jungle_impl(ctx):
             target_file = resource_file,
         )
 
+        if count == 0:
+            root_resource_path = paths.relativize(symlinked_resource_file.dirname, jungle_file.dirname)
+
+    jungle_content = ""
+
     for device_id in ctx.attr.device_ids:
-        if sources_path:
+        if root_source_path:
             jungle_content += "{id}.sourcePath = $({id}.sourcePath);{dir}\n".format(
                 id = device_id,
-                dir = sources_path,
+                dir = root_source_path,
             )
-        if resources_path:
+        if root_resource_path:
             jungle_content += "{id}.resourcePath = $({id}.resourcePath);{dir}\n".format(
                 id = device_id,
-                dir = resources_path,
+                dir = root_resource_path,
             )
+
     ctx.actions.write(jungle_file, jungle_content)
+
     return [
         JunglesInfo(jungle_files = [jungle_file]),
         DefaultInfo(files = depset(outputs)),
