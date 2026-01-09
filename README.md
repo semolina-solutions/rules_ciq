@@ -45,7 +45,7 @@ containing the following reference to your CIQ developer key:
 1. Create a `MODULE.bazel` file for your project and add the `rules_ciq` dependency:
 
     ```python
-    bazel_dep(name = "rules_ciq", version = "0.1.0")
+    bazel_dep(name = "rules_ciq", version = "0.2.0")
     ```
 
     If you'd prefer to be on the bleeding edge, instead use:
