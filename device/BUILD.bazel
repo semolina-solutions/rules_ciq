@@ -4,6 +4,10 @@ Defines targets for interacting with physical Garmin devices.
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load(
+    "//device:defs.bzl",
+    "ciq_view_system_log",
+)
 
 exports_files(["defs.bzl"])
 
@@ -62,4 +66,8 @@ rust_binary(
         "@crates//:prost",
         "@crates//:xml",
     ],
+)
+
+ciq_view_system_log(
+    name = "view_system_log",
 )

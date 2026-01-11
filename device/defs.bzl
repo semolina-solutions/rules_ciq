@@ -2,8 +2,8 @@
 Rules for interacting with physical Garmin devices.
 """
 
-load("//build:defs.bzl", "DeviceBuildInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("//build:defs.bzl", "DeviceBuildInfo")
 
 def _calculatePrgPath(prg_file):
     """Calculates the destination path for the .prg file on the device.
@@ -27,6 +27,18 @@ def _calculateLogPath(prg_file):
     """
     txt_basename = paths.replace_extension(prg_file.basename, ".TXT")
     return paths.join("/GARMIN/Apps/LOGS", txt_basename)
+
+def _calculatePrfPath(prg_file):
+    """Calculates the path for the profiling log file corresponding to the .prg file on the device.
+
+    Args:
+        prg_file: A .prg file.
+
+    Returns:
+        The absolute path on the device where the profiling log file is located.
+    """
+    prf_basename = paths.replace_extension(prg_file.basename, ".PRF")
+    return paths.join("/GARMIN/Apps/LOGS", prf_basename)
 
 def _ciq_sideload_app_impl(ctx):
     device_build_info = ctx.attr.device_build[DeviceBuildInfo]
@@ -136,18 +148,6 @@ ciq_view_app_log = rule(
     },
 )
 
-def _calculatePrfPath(prg_file):
-    """Calculates the path for the profiling log file corresponding to the .prg file on the device.
-
-    Args:
-        prg_file: A .prg file.
-
-    Returns:
-        The absolute path on the device where the profiling log file is located.
-    """
-    prf_basename = paths.replace_extension(prg_file.basename, ".PRF")
-    return paths.join("/GARMIN/Apps/LOGS", prf_basename)
-
 def _ciq_view_app_profiling_impl(ctx):
     device_build_info = ctx.attr.device_build[DeviceBuildInfo]
     output_script = ctx.actions.declare_file(ctx.label.name + ".sh")
@@ -202,6 +202,48 @@ ciq_view_app_profiling = rule(
             executable = True,
             cfg = "exec",
             default = Label("//device:interpret_profiling_log"),
+        ),
+    },
+)
+
+def _ciq_view_system_log_impl(ctx):
+    output_script = ctx.actions.declare_file(ctx.label.name + ".sh")
+    log_dst_path = "{}.txt".format(ctx.label.name)
+
+    ctx.actions.write(
+        output = output_script,
+        content = """
+            rm -f "{log_dst}"
+            touch "{log_dst}"
+            {tool} "/GARMIN/Apps/LOGS/CIQ_LOG.YML" "{log_dst}"
+            cat "{log_dst}"
+        """.format(
+            tool = ctx.executable._mtp_download_tool.short_path,
+            log_dst = log_dst_path,
+        ),
+        is_executable = True,
+    )
+
+    return [
+        DefaultInfo(
+            executable = output_script,
+            runfiles = ctx.runfiles(
+                files = [
+                    output_script,
+                ] + ctx.attr._mtp_download_tool.files.to_list(),
+            ),
+        ),
+    ]
+
+ciq_view_system_log = rule(
+    implementation = _ciq_view_system_log_impl,
+    doc = "Downloads and outputs the system log file from a connected physical Garmin device.",
+    executable = True,
+    attrs = {
+        "_mtp_download_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("//device:download"),
         ),
     },
 )
