@@ -703,10 +703,15 @@ def _ciq_device_build_impl(ctx):
     manifest_info = ctx.attr.project[ManifestInfo]
     jungles_info = ctx.attr.project[JunglesInfo]
     name = ctx.label.name
-    prg_file = ctx.actions.declare_file(name + ".prg")
-    prg_debug_xml_file = ctx.actions.declare_file(name + ".prg.debug.xml")
-    settings_json_file = ctx.actions.declare_file(name + "-settings.json")
-    fit_contributions_json_file = ctx.actions.declare_file(name + "-fit_contributions.json")
+
+    # The compiler takes its working directory as the prg's directory. Place
+    # the prg in a subdirectory to prevent parallel builds from colliding.
+    prefix = "{name}/{name}".format(name = name)
+    prg_file = ctx.actions.declare_file(prefix + ".prg")
+    prg_debug_xml_file = ctx.actions.declare_file(prefix + ".prg.debug.xml")
+    settings_json_file = ctx.actions.declare_file(prefix + ".prg-settings.json")
+    fit_contributions_json_file = ctx.actions.declare_file(prefix + ".prg-fit_contributions.json")
+
     flags = []
     if ctx.attr.release:
         flags.append("-r")
@@ -716,6 +721,7 @@ def _ciq_device_build_impl(ctx):
         flags.append("-k")
     if ctx.attr.type_check_level:
         flags.append("-l {}".format(ctx.attr.type_check_level))
+
     ctx.actions.run_shell(
         execution_requirements = {
             # Allows default.jungle to be written.
@@ -729,8 +735,8 @@ def _ciq_device_build_impl(ctx):
             fit_contributions_json_file,
         ],
         command = """
-      touch {settings_json} && \\
-      touch {fit_contributions_json} && \\
+      touch {settings_json}
+      touch {fit_contributions_json}
       "{executable}" -o "{prg}" -y "{key}" -d {device_id} -f "{jungles}" {flags}
     """.format(
             settings_json = settings_json_file.path,
@@ -816,7 +822,7 @@ def _ciq_export_impl(ctx):
         # The manifest file must be chmod'd to be successfully copied by the
         # monkeyc tool.
         command = """
-      chmod 644 "{manifest}" &&
+      chmod 644 "{manifest}"
       "{executable}" -o "{iq}" -y "{key}" -f "{jungles}" -e -r {type_check_level}
     """.format(
             manifest = manifest_info.manifest_file.path,
