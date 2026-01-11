@@ -76,7 +76,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
     for device_id in device_ids:
         for mode in [_MODE_DEBUG, _MODE_RELEASE]:
             is_release = (mode == _MODE_RELEASE)
-            
+
             # Build
             ciq_device_build(
                 name = _BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
@@ -86,7 +86,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 type_check_level = type_check_level,
                 visibility = visibility,
             )
-            
+
             # Build (profiling)
             ciq_device_build(
                 name = _PROFILING_BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
@@ -98,7 +98,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 visibility = visibility,
             )
 
-            # View App Log
+            # View app Log
             ciq_view_app_log(
                 name = _VIEW_APP_LOG_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
@@ -111,7 +111,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 device_build = _BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 visibility = visibility,
             )
-            
+
             # Simulation (where profiling starts immediately)
             ciq_simulation(
                 name = _PROFILING_SIMULATION_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
@@ -119,21 +119,21 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 visibility = visibility,
             )
 
-            # Sideload App
+            # Sideload app
             ciq_sideload_app(
                 name = _SIDELOAD_APP_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 visibility = visibility,
             )
-            
-            # Sideload App (profiling)
+
+            # Sideload app (profiling)
             ciq_sideload_app(
                 name = _PROFILING_SIDELOAD_APP_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _PROFILING_BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 visibility = visibility,
             )
 
-            # View App Profiling (using the profiling build)
+            # View app profiling (using the profiling build)
             ciq_view_app_profiling(
                 name = _VIEW_APP_PROFILING_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
                 device_build = _PROFILING_BUILD_TEMPLATE.format(name = name, device_id = device_id, mode = mode),
