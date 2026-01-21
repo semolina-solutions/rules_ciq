@@ -709,8 +709,8 @@ def _ciq_device_build_impl(ctx):
     prefix = "{name}/{name}".format(name = name)
     prg_file = ctx.actions.declare_file(prefix + ".prg")
     prg_debug_xml_file = ctx.actions.declare_file(prefix + ".prg.debug.xml")
-    settings_json_file = ctx.actions.declare_file(prefix + ".prg-settings.json")
-    fit_contributions_json_file = ctx.actions.declare_file(prefix + ".prg-fit_contributions.json")
+    settings_json_file = ctx.actions.declare_file(prefix + "-settings.json")
+    fit_contributions_json_file = ctx.actions.declare_file(prefix + "-fit_contributions.json")
 
     flags = []
     if ctx.attr.release:
