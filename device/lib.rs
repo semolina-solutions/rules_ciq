@@ -3,11 +3,24 @@
 //! This library provides a Rust interface to `libmtp` for interacting with MTP devices.
 //! It supports listing files, uploading files, and downloading files.
 
+use clap::Parser;
 use libc;
 use std::ffi::c_void;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::c_char;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Wait for device definition (seconds)
+    #[arg(long, default_value_t = 60)]
+    wait_for: u64,
+
+    /// Source and destination file pairs
+    #[arg(num_args = 2.., value_names = ["SRC", "DST"])]
+    files: Vec<String>,
+}
 
 #[repr(C)]
 pub struct LIBMTP_mtpdevice_t {
@@ -373,27 +386,41 @@ pub fn run_mtp_operation<F>(operation: F)
 where
     F: Fn(&MtpDevice, &str, &str) -> Result<(), String>,
 {
-    let args: Vec<String> = std::env::args().collect();
+    let cli = Cli::parse();
 
-    if args.len() < 3 || (args.len() - 1) % 2 != 0 {
-        eprintln!("Usage: {} <src> <dst> [<src> <dst> ...]", args[0]);
+    if cli.files.len() % 2 != 0 {
+        eprintln!("Error: Files must be provided in pairs of <src> <dst>");
         std::process::exit(1);
     }
 
-    let device = match init_and_get_first_device() {
-        Some(d) => d,
-        None => {
-            eprintln!("No MTP device found, or device already claimed.");
-            std::process::exit(1);
+    let start_time = std::time::Instant::now();
+    let wait_duration = std::time::Duration::from_secs(cli.wait_for);
+    let mut first_attempt = true;
+
+    let device = loop {
+        match init_and_get_first_device() {
+            Some(d) => break d,
+            None => {
+                if start_time.elapsed() >= wait_duration {
+                    eprintln!("No MTP device found, or device already claimed.");
+                    std::process::exit(1);
+                }
+
+                if first_attempt {
+                    eprintln!("No MTP device found, retrying...");
+                    first_attempt = false;
+                }
+
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
         }
     };
 
     println!("Connected to {}", get_device_friendly_name(&device));
 
-    let user_args = &args[1..];
     let mut exit_code = 0;
 
-    for chunk in user_args.chunks(2) {
+    for chunk in cli.files.chunks(2) {
         let src = &chunk[0];
         let dst = &chunk[1];
 
