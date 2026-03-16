@@ -76,7 +76,6 @@ def _ciq_sideload_app_impl(ctx):
                     empty_log_file,
                     output_script,
                     device_build_info.prg_file,
-                    device_build_info.settings_json_file,
                 ] + ctx.attr._mtp_upload_tool.files.to_list(),
             ),
         ),
