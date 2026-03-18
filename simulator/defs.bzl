@@ -2,9 +2,26 @@
 Rules for running applications in the Connect IQ Simulator.
 """
 
-load("//build:defs.bzl", "DeviceBuildInfo", "ManifestInfo")
-load("@local_ciq//sdk:defs.bzl", "SdkInfo")
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("@local_ciq//sdk:defs.bzl", "SdkInfo")
+load("//build:defs.bzl", "DeviceBuildInfo", "ManifestInfo")
+
+# See https://github.com/bazelbuild/bazel/blob/master/tools/bash/runfiles/runfiles.bash
+# and https://bazel.build/docs/runfiles
+# This is the canonical snippet needed to locate and load the Bazel bash runfiles
+# library robustly across Bazel versions without manual Starlark path resolution.
+_BASH_RUNFILES_BOILERPLATE = """
+# --- begin runfiles.bash initialization v3 ---
+# Copy-pasted from the Bazel Bash runfiles library v3.
+set -uo pipefail; set +e; f=bazel_tools/tools/bash/runfiles/runfiles.bash
+source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \\
+  source "$(grep -sm1 "^$f " "${RUNFILES_MANIFEST_FILE:-/dev/null}" | cut -f2- -d' ')" 2>/dev/null || \\
+  source "$0.runfiles/$f" 2>/dev/null || \\
+  source "$(grep -sm1 "^$f " "$0.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \\
+  source "$(grep -sm1 "^$f " "$0.exe.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \\
+  { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
+# --- end runfiles.bash initialization v3 ---
+"""
 
 def _ciq_simulation_impl(ctx):
     sdk_info = ctx.attr.device_build[SdkInfo]
@@ -16,16 +33,17 @@ def _ciq_simulation_impl(ctx):
     # used to find the absolute paths to particular files that seem to be in
     # different locations depending on the consumption pattern of the module.
     script_content = """
-        source {runfiles_script}
-        GET_APPLICATION_ID_TOOL=$(rlocation {get_application_id_tool})
-        MANIFEST_XML_PATH=$(rlocation {manifest_xml_path})
-        APPLICATION_ID=$($GET_APPLICATION_ID_TOOL $MANIFEST_XML_PATH)
+        #!/usr/bin/env bash
+        {runfiles_boilerplate}
+        GET_APPLICATION_ID_TOOL=$(rlocation "{get_application_id_tool}")
+        MANIFEST_XML_PATH=$(rlocation "{manifest_xml_path}")
+        APPLICATION_ID=$($GET_APPLICATION_ID_TOOL "$MANIFEST_XML_PATH")
         {simulator_tool} "{simulator_path}" "{shell_path}" "$APPLICATION_ID" "{prg_path}" "{debug_xml_path}" "{settings_json_path}" {device_id}
     """
     ctx.actions.write(
         output = output_script,
         content = script_content.format(
-            runfiles_script = ctx.file._runfiles_script.short_path,
+            runfiles_boilerplate = _BASH_RUNFILES_BOILERPLATE,
             get_application_id_tool = paths.normalize(paths.join(ctx.workspace_name, ctx.executable._get_application_id_tool.short_path)),
             manifest_xml_path = paths.normalize(paths.join(ctx.workspace_name, manifest_info.manifest_file.short_path)),
             simulator_tool = ctx.executable._simulator_tool.short_path,
@@ -38,21 +56,25 @@ def _ciq_simulation_impl(ctx):
         ),
         is_executable = True,
     )
+
+    # Merge runfiles from the _runfiles target so that root_symlinks
+    # and other runtime data are available.
+    runfiles = ctx.runfiles(
+        files = [
+            output_script,
+            device_build_info.prg_file,
+            device_build_info.prg_debug_xml_file,
+            device_build_info.settings_json_file,
+            manifest_info.manifest_file,
+            ctx.executable._get_application_id_tool,
+            ctx.executable._simulator_tool,
+        ],
+    ).merge(ctx.attr._runfiles[DefaultInfo].default_runfiles)
+
     return [
         DefaultInfo(
             executable = output_script,
-            runfiles = ctx.runfiles(
-                files = [
-                    output_script,
-                    device_build_info.prg_file,
-                    device_build_info.prg_debug_xml_file,
-                    device_build_info.settings_json_file,
-                    manifest_info.manifest_file,
-                    ctx.file._runfiles_script,
-                    ctx.executable._get_application_id_tool,
-                    ctx.executable._simulator_tool,
-                ],
-            ),
+            runfiles = runfiles,
         ),
         testing.ExecutionInfo({
             "local": "1",
@@ -69,9 +91,8 @@ ciq_simulation = rule(
             mandatory = True,
             providers = [SdkInfo, ManifestInfo, DeviceBuildInfo],
         ),
-        "_runfiles_script": attr.label(
+        "_runfiles": attr.label(
             default = Label("@bazel_tools//tools/bash/runfiles"),
-            allow_single_file = True,
         ),
         "_get_application_id_tool": attr.label(
             executable = True,
@@ -96,9 +117,8 @@ ciq_test = rule(
             mandatory = True,
             providers = [SdkInfo, ManifestInfo, DeviceBuildInfo],
         ),
-        "_runfiles_script": attr.label(
+        "_runfiles": attr.label(
             default = Label("@bazel_tools//tools/bash/runfiles"),
-            allow_single_file = True,
         ),
         "_get_application_id_tool": attr.label(
             executable = True,
