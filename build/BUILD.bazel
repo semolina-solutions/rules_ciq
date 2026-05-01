@@ -25,7 +25,7 @@ rust_binary(
         "@crates//:clap",
         "@crates//:image",
         "@crates//:rectangle-pack",
-        "@crates//:rusttype",
+        "@crates//:swash",
     ],
 )
 

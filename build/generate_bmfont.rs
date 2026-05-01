@@ -1,7 +1,7 @@
 //! Generates a BMFont (FNT and PNG) from a source font file (TTF/OTF).
 //!
 //! Usage:
-//!   bazel run @rules_ciq//tools:generate_bmfont -- <font> <output> <height> [--chars <chars>] [--anti-alias] [--reference-chars <reference_chars>]
+//!   bazel run @rules_ciq//tools:generate_bmfont -- <font> <output> <height> [--chars <chars>] [--anti-alias] [--reference-chars <reference_chars>] [--weight <weight>]
 //!
 //! This tool rasterizes a font at a specified height and packs the glyphs into a texture.
 //! It produces two files:
@@ -16,6 +16,7 @@
 //! - `anti_alias` (optional): Enable anti-aliasing.
 //! - `reference_chars` (optional): If specified, the font scale is adjusted so that the
 //!   vertical span of these characters exactly matches the requested `height`.
+//! - `weight` (optional): Font weight for variable fonts (e.g. 100 to 900).
 
 use clap::Parser;
 use image::{ImageBuffer, Rgba};
@@ -23,7 +24,9 @@ use rectangle_pack::{
     contains_smallest_box, pack_rects, volume_heuristic, GroupedRectsToPlace, RectToInsert,
     TargetBin,
 };
-use rusttype::{point, Font, Scale};
+use swash::FontRef;
+use swash::scale::{ScaleContext, Source, StrikeWith};
+use swash::zeno::Format;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -58,6 +61,10 @@ struct Args {
     /// this string characters equals the requested height.
     #[arg(long)]
     reference_chars: Option<String>,
+
+    /// Font weight for variable fonts (optional).
+    #[arg(long)]
+    weight: Option<u16>,
 }
 
 struct CharInfo {
@@ -71,43 +78,73 @@ struct CharInfo {
     xadvance: i32,
 }
 
-fn calculate_scale(font: &Font, height: u32, reference_chars: Option<&str>) -> Scale {
-    let default_scale = Scale::uniform(height as f32);
+struct RenderedGlyph {
+    c: char,
+    width: u32,
+    height: u32,
+    left: i32,
+    top: i32,
+    advance: f32,
+    data: Vec<u8>,
+}
+
+fn calculate_scale(
+    font: &FontRef,
+    height: u32,
+    weight: Option<u16>,
+    reference_chars: Option<&str>,
+    context: &mut ScaleContext,
+) -> f32 {
+    let default_size = height as f32;
 
     let chars = match reference_chars {
         Some(s) if !s.is_empty() => s,
-        _ => return default_scale,
+        _ => return default_size,
     };
 
+    let charmap = font.charmap();
     let mut min_y = f32::MAX;
     let mut max_y = f32::MIN;
     let mut found = false;
 
+    let mut builder = context.builder(*font).size(default_size).hint(true);
+    if let Some(w) = weight {
+        builder = builder.variations(Some(swash::Setting::from(("wght", w as f32))));
+    }
+    let mut scaler = builder.build();
+    let mut render = swash::scale::Render::new(&[
+        Source::ColorOutline(0),
+        Source::ColorBitmap(StrikeWith::BestFit),
+        Source::Outline,
+    ]);
+
     for c in chars.chars() {
-        let glyph = font
-            .glyph(c)
-            .scaled(default_scale)
-            .positioned(point(0.0, 0.0));
-        if let Some(bb) = glyph.unpositioned().exact_bounding_box() {
-            if bb.min.y < min_y {
-                min_y = bb.min.y;
+        let glyph_id = charmap.map(c);
+        if glyph_id != 0 {
+            if let Some(image) = render.format(Format::Alpha).render(&mut scaler, glyph_id) {
+                let p = image.placement;
+                let top = p.top as f32;
+                let bottom = (p.top - p.height as i32) as f32;
+                if bottom < min_y {
+                    min_y = bottom;
+                }
+                if top > max_y {
+                    max_y = top;
+                }
+                found = true;
             }
-            if bb.max.y > max_y {
-                max_y = bb.max.y;
-            }
-            found = true;
         }
     }
 
     if found {
         let content_height = max_y - min_y;
         if content_height > 0.0 {
-            let scale_factor = height as f32 / content_height;
-            return Scale::uniform(height as f32 * scale_factor);
+            let scale_factor = default_size / content_height;
+            return default_size * scale_factor;
         }
     }
 
-    default_scale
+    default_size
 }
 
 fn get_unique_chars(chars: &str) -> Vec<char> {
@@ -123,33 +160,79 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Load font
     let font_data = std::fs::read(&args.font)?;
-    let font = Font::try_from_vec(font_data).ok_or("Error constructing font")?;
+    let font = FontRef::from_index(&font_data, 0).ok_or("Error constructing font")?;
+
+    let mut context = ScaleContext::new();
 
     // Calculate scale
-    let scale = calculate_scale(&font, args.height, args.reference_chars.as_deref());
+    let scale_size = calculate_scale(
+        &font,
+        args.height,
+        args.weight,
+        args.reference_chars.as_deref(),
+        &mut context,
+    );
+
+    // Build final scaler
+    let mut builder = context.builder(font).size(scale_size).hint(true);
+    if let Some(w) = args.weight {
+        builder = builder.variations(Some(swash::Setting::from(("wght", w as f32))));
+    }
+    let mut scaler = builder.build();
 
     // Rasterize glyphs
-    let v_metrics = font.v_metrics(scale);
-    let ascent = v_metrics.ascent.ceil() as i32;
+    let metrics = font.metrics(&[]);
+    let upm = metrics.units_per_em as f32;
+    let metrics_scale = scale_size / upm;
+    let ascent = (metrics.ascent * metrics_scale).ceil() as i32;
 
     let mut glyphs = Vec::new();
     let unique_chars = get_unique_chars(&args.chars);
+    let charmap = font.charmap();
+
+    let mut render = swash::scale::Render::new(&[
+        Source::ColorOutline(0),
+        Source::ColorBitmap(StrikeWith::BestFit),
+        Source::Outline,
+    ]);
 
     for c in unique_chars {
-        let glyph = font.glyph(c).scaled(scale).positioned(point(0.0, 0.0));
-        if let Some(bb) = glyph.pixel_bounding_box() {
-            glyphs.push((c, glyph, bb));
+        let glyph_id = charmap.map(c);
+        let advance = font.glyph_metrics(&[]).advance_width(glyph_id) * metrics_scale;
+        
+        if glyph_id != 0 {
+            if let Some(image) = render.format(Format::Alpha).render(&mut scaler, glyph_id) {
+                glyphs.push(RenderedGlyph {
+                    c,
+                    width: image.placement.width,
+                    height: image.placement.height,
+                    left: image.placement.left,
+                    top: image.placement.top,
+                    advance,
+                    data: image.data,
+                });
+            } else {
+                glyphs.push(RenderedGlyph {
+                    c,
+                    width: 0,
+                    height: 0,
+                    left: 0,
+                    top: 0,
+                    advance,
+                    data: Vec::new(),
+                });
+            }
         } else {
-            // Space or invisible character
-            let glyph = font.glyph(c).scaled(scale).positioned(point(0.0, 0.0));
-            glyphs.push((
+            // Space or invisible character or missing
+            glyphs.push(RenderedGlyph {
                 c,
-                glyph,
-                rusttype::Rect {
-                    min: point(0, 0),
-                    max: point(0, 0),
-                },
-            ));
+                width: 0,
+                height: 0,
+                left: 0,
+                top: 0,
+                advance,
+                data: Vec::new(),
+            });
         }
     }
 
@@ -157,10 +240,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rects: GroupedRectsToPlace<usize, ()> = GroupedRectsToPlace::new();
     let padding = 1;
 
-    for (i, (_c, _glyph, bb)) in glyphs.iter().enumerate() {
+    for (i, glyph) in glyphs.iter().enumerate() {
         // Dimensions we need to pack (ensure at least 1x1)
-        let w = (bb.width() as u32 + padding).max(1);
-        let h = (bb.height() as u32 + padding).max(1);
+        let w = (glyph.width + padding).max(1);
+        let h = (glyph.height + padding).max(1);
 
         rects.push_rect(i, None, RectToInsert::new(w, h, 1));
     }
@@ -206,45 +289,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Iterate sorted by original index (which maps to 'i' in packed_locations)
     for i in 0..glyphs.len() {
         if let Some((_, rect)) = packed_locations.get(&i) {
-            let (c, glyph, bb) = &glyphs[i];
+            let glyph = &glyphs[i];
 
             let target_x = rect.x();
             let target_y = rect.y();
 
-            let content_width = bb.width() as u32;
-            let content_height = bb.height() as u32;
-
-            if content_width > 0 && content_height > 0 {
-                glyph.draw(|x, y, v| {
-                    let alpha = if args.anti_alias {
-                        (v * 255.0) as u8
-                    } else {
-                        if v > 0.5 {
-                            255
+            if glyph.width > 0 && glyph.height > 0 {
+                let mut data_idx = 0;
+                for y in 0..glyph.height {
+                    for x in 0..glyph.width {
+                        let v = glyph.data[data_idx];
+                        let alpha = if args.anti_alias {
+                            v
                         } else {
-                            0
-                        }
-                    };
+                            if v > 127 {
+                                255
+                            } else {
+                                0
+                            }
+                        };
 
-                    if alpha > 0 {
-                        let px = target_x + x;
-                        let py = target_y + y;
-                        if px < width && py < height {
-                            texture.put_pixel(px, py, Rgba([alpha, alpha, alpha, 255]));
+                        if alpha > 0 {
+                            let px = target_x + x;
+                            let py = target_y + y;
+                            if px < width && py < height {
+                                texture.put_pixel(px, py, Rgba([alpha, alpha, alpha, 255]));
+                            }
                         }
+                        data_idx += 1;
                     }
-                });
+                }
             }
 
             char_data.push(CharInfo {
-                id: *c as u32,
+                id: glyph.c as u32,
                 x: target_x,
                 y: target_y,
-                width: content_width,
-                height: content_height,
-                xoffset: bb.min.x,
-                yoffset: ascent + bb.min.y,
-                xadvance: glyph.unpositioned().h_metrics().advance_width as i32,
+                width: glyph.width,
+                height: glyph.height,
+                xoffset: glyph.left,
+                yoffset: ascent - glyph.top,
+                xadvance: glyph.advance.round() as i32,
             });
         }
     }
@@ -284,22 +369,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file = File::create(&fnt_path)?;
     let mut writer = BufWriter::new(file);
 
+    let font_name = "Custom";
+    let texture_width = width;
+    let texture_height = height;
+
     writeln!(
         writer,
         "info face=\"{}\" size={} bold=0 italic=0 charset=\"\" unicode=1 stretchH=100 smooth=1 aa={} padding=0,0,0,0 spacing=1,1 outline=0",
-        "Custom",
+        font_name,
         args.height,
         if args.anti_alias { 1 } else { 0 }
     )?;
 
-    let descent = v_metrics.descent.floor() as i32;
-    let line_gap = v_metrics.line_gap.ceil() as i32;
-    let line_height = ascent - descent + line_gap;
+    let descent = (metrics.descent * metrics_scale).floor() as i32;
+    let line_gap = (metrics.leading * metrics_scale).ceil() as i32;
+    // Swash descent is a positive distance scalar, unlike rusttype
+    let line_height = ascent + descent + line_gap;
 
     writeln!(
         writer,
         "common lineHeight={} base={} scaleW={} scaleH={} pages=1 packed=0 alphaChnl=0 redChnl=1 greenChnl=1 blueChnl=1",
-        line_height, ascent, width, height
+        line_height, ascent, texture_width, texture_height
     )?;
 
     writeln!(

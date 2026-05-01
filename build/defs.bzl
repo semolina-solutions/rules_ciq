@@ -229,10 +229,16 @@ ciq_scaled_drawable_jungle = rule(
     },
 )
 
-_FONTS_XML_TEMPLATE = """
+_FONT_XML_TEMPLATE = """
 <fonts>
     <font id="{id}" filename="{fnt_filename}" filter="" antialias="{antialias}" />
 </fonts>
+"""
+
+_FONT_METRICS_JSON_XML_TEMPLATE = """
+<resources>
+    <jsonData id="{id}" filename="{metrics_json_filename}" />
+</resources>
 """
 
 def _ciq_bmfont_generator(ctx, device_id, _device_metadata, _sources_dir, resources_dir):
@@ -246,26 +252,52 @@ def _ciq_bmfont_generator(ctx, device_id, _device_metadata, _sources_dir, resour
     output_png = ctx.actions.declare_file(output_base + ".png")
     output_fonts_xml = ctx.actions.declare_file(paths.join(resources_dir, "fonts.xml"))
 
-    cmd = [
-        "UNSCALED_HEIGHT={};".format(height),
-        "SCALED_HEIGHT={};".format("$({tool} $UNSCALED_HEIGHT {percent} --snap {snap})".format(
-            tool = ctx.executable._scale_value_tool.path,
-            percent = ctx.attr.percent,
-            snap = ctx.attr.snap,
-        )),
-        ctx.executable._generate_bmfont_tool.path,
-        ctx.file.font.path,
-        output_fnt.path[:-4],
-        "$SCALED_HEIGHT",
-    ]
+    generate_bmfont_extras = []
     if ctx.attr.chars:
-        cmd.append("--chars")
-        cmd.append('"{}"'.format(ctx.attr.chars))
+        generate_bmfont_extras.append("--chars")
+        generate_bmfont_extras.append('"{}"'.format(ctx.attr.chars))
     if ctx.attr.reference_chars:
-        cmd.append("--reference-chars")
-        cmd.append('"{}"'.format(ctx.attr.reference_chars))
+        generate_bmfont_extras.append("--reference-chars")
+        generate_bmfont_extras.append('"{}"'.format(ctx.attr.reference_chars))
     if ctx.attr.anti_alias:
-        cmd.append("--anti-alias")
+        generate_bmfont_extras.append("--anti-alias")
+    if ctx.attr.weight > 0:
+        generate_bmfont_extras.append("--weight")
+        generate_bmfont_extras.append(str(ctx.attr.weight))
+
+    command = """
+        UNSCALED_HEIGHT={height_expr}
+        SCALED_HEIGHT=$({scale_value_tool} $UNSCALED_HEIGHT {percent} --snap {snap})
+        {generate_bmfont_tool} {font} {output_base} $SCALED_HEIGHT {generate_bmfont_extras}
+    """.format(
+        height_expr = height,
+        scale_value_tool = ctx.executable._scale_value_tool.path,
+        percent = ctx.attr.percent,
+        snap = ctx.attr.snap,
+        generate_bmfont_tool = ctx.executable._generate_bmfont_tool.path,
+        font = ctx.file.font.path,
+        output_base = output_fnt.path[:-4],
+        generate_bmfont_extras = " ".join(generate_bmfont_extras),
+    )
+
+    command_outputs = [output_fnt, output_png]
+    outputs = [output_fnt, output_png, output_fonts_xml]
+
+    if ctx.attr.metrics_resource_id:
+        output_metrics_json = ctx.actions.declare_file(paths.join(resources_dir, "metrics.json"))
+        output_resources_xml = ctx.actions.declare_file(paths.join(resources_dir, "resources.xml"))
+        command_outputs.append(output_metrics_json)
+        outputs.extend([output_metrics_json, output_resources_xml])
+        command += """
+            echo "{{\\"height\\": $SCALED_HEIGHT}}" > {}
+        """.format(output_metrics_json.path)
+        ctx.actions.write(
+            output = output_resources_xml,
+            content = _FONT_METRICS_JSON_XML_TEMPLATE.format(
+                id = ctx.attr.metrics_resource_id,
+                metrics_json_filename = output_metrics_json.basename,
+            ),
+        )
 
     inputs = [
         ctx.file.font,
@@ -278,21 +310,21 @@ def _ciq_bmfont_generator(ctx, device_id, _device_metadata, _sources_dir, resour
 
     ctx.actions.run_shell(
         inputs = inputs,
-        outputs = [output_fnt, output_png],
+        outputs = command_outputs,
         tools = tools,
-        command = " ".join(cmd),
+        command = command,
     )
 
     ctx.actions.write(
         output = output_fonts_xml,
-        content = _FONTS_XML_TEMPLATE.format(
-            id = ctx.attr.resource_id,
+        content = _FONT_XML_TEMPLATE.format(
+            id = ctx.attr.font_resource_id,
             fnt_filename = output_fnt.basename,
             antialias = "true" if ctx.attr.anti_alias else "false",
         ),
     )
 
-    return [output_fnt, output_png, output_fonts_xml]
+    return outputs
 
 def _ciq_bmfont_jungle_impl(ctx):
     return jungle_generator(ctx, _ciq_bmfont_generator, ctx.attr.device_ids)
@@ -306,9 +338,12 @@ ciq_scaled_bmfont_jungle = rule(
             allow_single_file = True,
             mandatory = True,
         ),
-        "resource_id": attr.string(
+        "font_resource_id": attr.string(
             doc = "Resource ID to use in the generated fonts.xml file.",
             mandatory = True,
+        ),
+        "metrics_resource_id": attr.string(
+            doc = "Resource ID to use in the generated metrics jsonData entry.",
         ),
         "chars": attr.string(
             doc = "Characters to include in the font. Defaults to a standard ASCII set if unspecified.",
@@ -328,6 +363,10 @@ ciq_scaled_bmfont_jungle = rule(
         "anti_alias": attr.bool(
             doc = "Enable anti-aliasing.",
             default = False,
+        ),
+        "weight": attr.int(
+            doc = "Font weight for variable fonts (e.g. 100 to 900). Default is 0 (use default).",
+            default = 0,
         ),
         "snap": attr.int(
             doc = "Pixel multiple to snap scaled font to.",

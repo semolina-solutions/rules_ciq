@@ -29,9 +29,9 @@ ciq_scaled_bmfont_jungle(
     chars = "Hi",
     device_dependent_height = "//metrics:screen_minimum_dimension",
     font = "Micro5/Micro5-Regular.ttf",
+    font_resource_id = "ScreenScaledFont",
     percent = 50,
     reference_chars = "A",
-    resource_id = "ScreenScaledFont",
 )
 
 # A custom font sized to SDK font "xtiny" but snapped to a multiple that matches the font.
@@ -41,8 +41,8 @@ ciq_scaled_bmfont_jungle(
     chars = "SNAPPED",
     device_dependent_height = "//metrics:xtiny_font_height",
     font = "Micro5/Micro5-Regular.ttf",
+    font_resource_id = "XtinySnappedFont",
     reference_chars = "A",
-    resource_id = "XtinySnappedFont",
     snap = 5,
 )
 
