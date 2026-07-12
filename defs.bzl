@@ -35,6 +35,7 @@ load(
 )
 load(
     "//store:defs.bzl",
+    _ciq_field_screenshot = "ciq_field_screenshot",
     _ciq_framed_screenshot = "ciq_framed_screenshot",
     _ciq_store_image = "ciq_store_image",
 )
@@ -67,5 +68,6 @@ ciq_simulation = _ciq_simulation
 ciq_test = _ciq_test
 
 # store/defs.bzl
+ciq_field_screenshot = _ciq_field_screenshot
 ciq_framed_screenshot = _ciq_framed_screenshot
 ciq_store_image = _ciq_store_image

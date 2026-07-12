@@ -47,23 +47,73 @@ Exports the application (.iq) for distribution.
 | <a id="ciq_export-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict). Default is 0.  | INT | false |  0  |
 
 
+<a id="ciq_field_screenshot"></a>
+
+
+<pre>
+ciq_field_screenshot(<a href="#ciq_field_screenshot-name">name</a>, <a href="#ciq_field_screenshot-device_id">device_id</a>, <a href="#ciq_field_screenshot-field_index">field_index</a>, <a href="#ciq_field_screenshot-layout">layout</a>, <a href="#ciq_field_screenshot-screenshot">screenshot</a>)
+</pre>
+
+Extracts a single data field rectangle from a simulator screenshot.
+
+Looks up the field's pixel rectangle from the device's simulator.json layout
+metadata (matched by layout name and 0-based field index), then produces an
+output PNG of the same dimensions as the input with all pixels outside the
+field rectangle set to fully transparent.
+
+Example:
+    ciq_field_screenshot(
+        name = "fr945_zone2_field1",
+        screenshot = ":fr945_3_Fields_A_zone_2.png",
+        device_id = "fr945",
+        layout = "3 Fields A",
+        field_index = 1,
+    )
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_field_screenshot-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_field_screenshot-device_id"></a>device_id |  The device ID (e.g. 'fr945') used to look up layout metadata.  | STRING | true |    |
+| <a id="ciq_field_screenshot-field_index"></a>field_index |  0-based index of the field within the named layout's 'fields' array.  | INT | true |    |
+| <a id="ciq_field_screenshot-layout"></a>layout |  The layout name as it appears in simulator.json (e.g. '3 Fields A').  | STRING | true |    |
+| <a id="ciq_field_screenshot-screenshot"></a>screenshot |  The simulator screenshot PNG to extract from.  | LABEL | true |    |
+
+
 <a id="ciq_framed_screenshot"></a>
 
 
 <pre>
-ciq_framed_screenshot(<a href="#ciq_framed_screenshot-name">name</a>, <a href="#ciq_framed_screenshot-crop">crop</a>, <a href="#ciq_framed_screenshot-device_id">device_id</a>, <a href="#ciq_framed_screenshot-screenshot">screenshot</a>)
+ciq_framed_screenshot(<a href="#ciq_framed_screenshot-name">name</a>, <a href="#ciq_framed_screenshot-background_color">background_color</a>, <a href="#ciq_framed_screenshot-crop">crop</a>, <a href="#ciq_framed_screenshot-device_id">device_id</a>, <a href="#ciq_framed_screenshot-screenshots">screenshots</a>)
 </pre>
 
-Superimposes a simulator screenshot into a device background image.
+Superimposes one or more simulator screenshots into a device background image.
+
+Multiple screenshots are composited in list order (first = bottom-most) before the
+device frame is applied on top. This allows transparent-field-extracted PNGs from
+ciq_field_screenshot to be layered together into a single composite view.
+
+Example:
+    ciq_framed_screenshot(
+        name = "fr970_composite_framed",
+        device_id = "fr970",
+        screenshots = [
+            ":fr970_field_z2",
+            ":fr970_field_z4",
+            ":fr970_field_z5",
+        ],
+    )
 
 **ATTRIBUTES**
 
 | Name | Description | Type | Mandatory | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_framed_screenshot-name"></a>name |  A unique name for this target.  | NAME | true |    |
-| <a id="ciq_framed_screenshot-crop"></a>crop |  If True, crops the output image to the dimensions of the screenshot with the background superimposed.  | BOOLEAN | false |  False  |
+| <a id="ciq_framed_screenshot-background_color"></a>background_color |  Optional background fill colour as a hex string (#RRGGBB or #RRGGBBAA). Applied before screenshots are composited. If unset, unfilled areas are transparent.  | STRING | false |  ""  |
+| <a id="ciq_framed_screenshot-crop"></a>crop |  If True, crops the output to the dimensions of the first screenshot with the background superimposed.  | BOOLEAN | false |  False  |
 | <a id="ciq_framed_screenshot-device_id"></a>device_id |  The device ID to simulate (e.g. 'fenix6').  | STRING | true |    |
-| <a id="ciq_framed_screenshot-screenshot"></a>screenshot |  The simulator screenshot image file.  | LABEL | true |    |
+| <a id="ciq_framed_screenshot-screenshots"></a>screenshots |  One or more simulator screenshot image files to composite (in order, first = bottom-most layer).  | LABEL_LIST | true |    |
 
 
 <a id="ciq_jungle"></a>
@@ -131,7 +181,7 @@ Defines a Connect IQ project, linking a manifest file with jungle files and reso
 
 
 <pre>
-ciq_scaled_bmfont_jungle(<a href="#ciq_scaled_bmfont_jungle-name">name</a>, <a href="#ciq_scaled_bmfont_jungle-anti_alias">anti_alias</a>, <a href="#ciq_scaled_bmfont_jungle-chars">chars</a>, <a href="#ciq_scaled_bmfont_jungle-device_dependent_height">device_dependent_height</a>, <a href="#ciq_scaled_bmfont_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_bmfont_jungle-font">font</a>, <a href="#ciq_scaled_bmfont_jungle-percent">percent</a>, <a href="#ciq_scaled_bmfont_jungle-reference_chars">reference_chars</a>, <a href="#ciq_scaled_bmfont_jungle-resource_id">resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-snap">snap</a>)
+ciq_scaled_bmfont_jungle(<a href="#ciq_scaled_bmfont_jungle-name">name</a>, <a href="#ciq_scaled_bmfont_jungle-anti_alias">anti_alias</a>, <a href="#ciq_scaled_bmfont_jungle-chars">chars</a>, <a href="#ciq_scaled_bmfont_jungle-device_dependent_height">device_dependent_height</a>, <a href="#ciq_scaled_bmfont_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_bmfont_jungle-font">font</a>, <a href="#ciq_scaled_bmfont_jungle-font_resource_id">font_resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-metrics_resource_id">metrics_resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-percent">percent</a>, <a href="#ciq_scaled_bmfont_jungle-reference_chars">reference_chars</a>, <a href="#ciq_scaled_bmfont_jungle-snap">snap</a>, <a href="#ciq_scaled_bmfont_jungle-weight">weight</a>)
 </pre>
 
 Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font for specific devices.
@@ -146,10 +196,12 @@ Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font f
 | <a id="ciq_scaled_bmfont_jungle-device_dependent_height"></a>device_dependent_height |  Metric target to use for height scaling.  | LABEL | true |    |
 | <a id="ciq_scaled_bmfont_jungle-device_ids"></a>device_ids |  List of device IDs to generate font resources for.  | STRING_LIST | false |  *All devices*  |
 | <a id="ciq_scaled_bmfont_jungle-font"></a>font |  Input font file (.ttf or .otf).  | LABEL | true |    |
+| <a id="ciq_scaled_bmfont_jungle-font_resource_id"></a>font_resource_id |  Resource ID to use in the generated fonts.xml file.  | STRING | true |    |
+| <a id="ciq_scaled_bmfont_jungle-metrics_resource_id"></a>metrics_resource_id |  Resource ID to use in the generated metrics jsonData entry.  | STRING | false |  ""  |
 | <a id="ciq_scaled_bmfont_jungle-percent"></a>percent |  Percentage of the base size to scale to (100 = original size).  | INT | false |  100  |
 | <a id="ciq_scaled_bmfont_jungle-reference_chars"></a>reference_chars |  String of characters to use as a height reference for scaling. If unspecified, no additional scaling is applied.  | STRING | false |  ""  |
-| <a id="ciq_scaled_bmfont_jungle-resource_id"></a>resource_id |  Resource ID to use in the generated fonts.xml file.  | STRING | true |    |
 | <a id="ciq_scaled_bmfont_jungle-snap"></a>snap |  Pixel multiple to snap scaled font to.  | INT | false |  1  |
+| <a id="ciq_scaled_bmfont_jungle-weight"></a>weight |  Font weight for variable fonts (e.g. 100 to 900). Default is 0 (use default).  | INT | false |  0  |
 
 
 <a id="ciq_scaled_drawable_jungle"></a>

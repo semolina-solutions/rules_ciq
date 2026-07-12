@@ -32,3 +32,12 @@ rust_binary(
         "@crates//:image",
     ],
 )
+
+rust_binary(
+    name = "extract_field",
+    srcs = ["extract_field.rs"],
+    deps = [
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)

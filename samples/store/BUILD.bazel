@@ -19,16 +19,16 @@ load(
 # Generates screenshot in the frame of a fenix6.
 ciq_framed_screenshot(
     name = "hello_world_fenix6_framed_screenshot",
-    screenshot = "hello_world_fenix6_screenshot.png",
-    device_id = "fenix6"
+    device_id = "fenix6",
+    screenshots = ["hello_world_fenix6_screenshot.png"],
 )
 
 # Generates screenshot in the frame of a fenix6, cropped to the screenshot.
 ciq_framed_screenshot(
     name = "hello_world_fenix6_framed_screenshot_cropped",
-    screenshot = "hello_world_fenix6_screenshot.png",
-    device_id = "fenix6",
     crop = True,
+    device_id = "fenix6",
+    screenshots = ["hello_world_fenix6_screenshot.png"],
 )
 
 # Generates an animated GIF with two frames, one static and one generated
@@ -38,9 +38,12 @@ ciq_framed_screenshot(
 ciq_store_image(
     name = "hello_world_fenix6_animated_store_image",
     images = [
-      "check_this_out.png",
-      ":hello_world_fenix6_framed_screenshot_cropped"
+        "check_this_out.png",
+        ":hello_world_fenix6_framed_screenshot_cropped",
     ],
     max_size_kb = 150,
-    transition_millis = [2000, 3000],
+    transition_millis = [
+        2000,
+        3000,
+    ],
 )
