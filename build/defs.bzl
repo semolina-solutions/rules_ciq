@@ -113,7 +113,7 @@ _DRAWABLES_BITMAP_XML_TEMPLATE = """
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd"
 >
-    <bitmap id="{id}" filename="{filename}" automaticPalette="true" />
+    <bitmap id="{id}" filename="{filename}" automaticPalette="{automatic_palette}" />
 </drawables>
 """
 
@@ -176,6 +176,7 @@ def _ciq_scaled_drawable_generator(ctx, device_id, _device_metadata, _sources_di
         _DRAWABLES_BITMAP_XML_TEMPLATE.format(
             id = ctx.attr.resource_id,
             filename = image_file.basename,
+            automatic_palette = "true" if ctx.attr.automatic_palette else "false",
         ),
     )
 
@@ -208,6 +209,10 @@ ciq_scaled_drawable_jungle = rule(
         "percent": attr.int(
             doc = "Percentage of the base size to scale to (100 = original size).",
             default = 100,
+        ),
+        "automatic_palette": attr.bool(
+            doc = "Whether to enable automatic palette reduction in the generated drawables.xml.",
+            default = True,
         ),
         "device_ids": attr.string_list(
             doc = "List of device IDs to generate scaled resources for.",
@@ -261,9 +266,9 @@ def _ciq_bmfont_generator(ctx, device_id, _device_metadata, _sources_dir, resour
         generate_bmfont_extras.append('"{}"'.format(ctx.attr.reference_chars))
     if ctx.attr.anti_alias:
         generate_bmfont_extras.append("--anti-alias")
-    if ctx.attr.weight > 0:
-        generate_bmfont_extras.append("--weight")
-        generate_bmfont_extras.append(str(ctx.attr.weight))
+    for tag, val in ctx.attr.variations.items():
+        generate_bmfont_extras.append("--variation")
+        generate_bmfont_extras.append("{}={}".format(tag, val))
 
     command = """
         UNSCALED_HEIGHT={height_expr}
@@ -364,9 +369,9 @@ ciq_scaled_bmfont_jungle = rule(
             doc = "Enable anti-aliasing.",
             default = False,
         ),
-        "weight": attr.int(
-            doc = "Font weight for variable fonts (e.g. 100 to 900). Default is 0 (use default).",
-            default = 0,
+        "variations": attr.string_dict(
+            doc = "Dictionary of font variation axis tags to values (e.g. {'FILL': '1', 'wght': '700'}).",
+            default = {},
         ),
         "snap": attr.int(
             doc = "Pixel multiple to snap scaled font to.",

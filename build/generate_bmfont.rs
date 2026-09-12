@@ -1,7 +1,7 @@
 //! Generates a BMFont (FNT and PNG) from a source font file (TTF/OTF).
 //!
 //! Usage:
-//!   bazel run @rules_ciq//tools:generate_bmfont -- <font> <output> <height> [--chars <chars>] [--anti-alias] [--reference-chars <reference_chars>] [--weight <weight>]
+//!   bazel run @rules_ciq//tools:generate_bmfont -- <font> <output> <height> [--chars <chars>] [--anti-alias] [--reference-chars <reference_chars>] [--variation <tag=value>...]
 //!
 //! This tool rasterizes a font at a specified height and packs the glyphs into a texture.
 //! It produces two files:
@@ -16,7 +16,7 @@
 //! - `anti_alias` (optional): Enable anti-aliasing.
 //! - `reference_chars` (optional): If specified, the font scale is adjusted so that the
 //!   vertical span of these characters exactly matches the requested `height`.
-//! - `weight` (optional): Font weight for variable fonts (e.g. 100 to 900).
+//! - `variation` (optional): Font variation axis setting in TAG=VALUE format (e.g. wght=700, FILL=1). Can be repeated.
 
 use clap::Parser;
 use image::{ImageBuffer, Rgba};
@@ -62,9 +62,29 @@ struct Args {
     #[arg(long)]
     reference_chars: Option<String>,
 
-    /// Font weight for variable fonts (optional).
-    #[arg(long)]
-    weight: Option<u16>,
+    /// Font variation axis settings in TAG=VALUE format (can be specified multiple times).
+    #[arg(long = "variation", value_parser = parse_variation)]
+    variations: Vec<(String, f32)>,
+}
+
+fn parse_variation(s: &str) -> Result<(String, f32), String> {
+    let parts: Vec<&str> = s.splitn(2, '=').collect();
+    if parts.len() != 2 {
+        return Err(format!("Invalid variation '{}', expected TAG=VALUE", s));
+    }
+    let tag = parts[0].trim().to_string();
+    let val = parts[1]
+        .trim()
+        .parse::<f32>()
+        .map_err(|e| format!("Invalid value in variation '{}': {}", s, e))?;
+    Ok((tag, val))
+}
+
+fn build_variations(variations: &[(String, f32)]) -> Vec<swash::Setting<f32>> {
+    variations
+        .iter()
+        .map(|(tag, val)| swash::Setting::from((tag.as_str(), *val)))
+        .collect()
 }
 
 struct CharInfo {
@@ -91,14 +111,15 @@ struct RenderedGlyph {
 fn calculate_scale(
     font: &FontRef,
     height: u32,
-    weight: Option<u16>,
+    variations: &[(String, f32)],
     reference_chars: Option<&str>,
     context: &mut ScaleContext,
 ) -> f32 {
     let default_size = height as f32;
 
-    let chars = match reference_chars {
-        Some(s) if !s.is_empty() => s,
+    let parsed_ref = reference_chars.map(decode_unicode_escapes);
+    let chars = match &parsed_ref {
+        Some(s) if !s.is_empty() => s.as_slice(),
         _ => return default_size,
     };
 
@@ -108,8 +129,9 @@ fn calculate_scale(
     let mut found = false;
 
     let mut builder = context.builder(*font).size(default_size).hint(true);
-    if let Some(w) = weight {
-        builder = builder.variations(Some(swash::Setting::from(("wght", w as f32))));
+    let vars = build_variations(variations);
+    if !vars.is_empty() {
+        builder = builder.variations(vars);
     }
     let mut scaler = builder.build();
     let mut render = swash::scale::Render::new(&[
@@ -118,7 +140,7 @@ fn calculate_scale(
         Source::Outline,
     ]);
 
-    for c in chars.chars() {
+    for &c in chars {
         let glyph_id = charmap.map(c);
         if glyph_id != 0 {
             if let Some(image) = render.format(Format::Alpha).render(&mut scaler, glyph_id) {
@@ -147,8 +169,61 @@ fn calculate_scale(
     default_size
 }
 
+fn decode_unicode_escapes(s: &str) -> Vec<char> {
+    let mut result = Vec::new();
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(&next) = chars.peek() {
+                if next == 'u' || next == 'U' {
+                    chars.next();
+                    let hex_len = if next == 'u' { 4 } else { 8 };
+                    if chars.peek() == Some(&'{') {
+                        chars.next();
+                        let mut hex_str = String::new();
+                        while let Some(&h) = chars.peek() {
+                            if h == '}' {
+                                chars.next();
+                                break;
+                            }
+                            hex_str.push(h);
+                            chars.next();
+                        }
+                        if let Ok(cp) = u32::from_str_radix(&hex_str, 16) {
+                            if let Some(ch) = char::from_u32(cp) {
+                                result.push(ch);
+                                continue;
+                            }
+                        }
+                    } else {
+                        let mut hex_str = String::new();
+                        for _ in 0..hex_len {
+                            if let Some(&h) = chars.peek() {
+                                if h.is_ascii_hexdigit() {
+                                    hex_str.push(h);
+                                    chars.next();
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                        if let Ok(cp) = u32::from_str_radix(&hex_str, 16) {
+                            if let Some(ch) = char::from_u32(cp) {
+                                result.push(ch);
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result.push(c);
+    }
+    result
+}
+
 fn get_unique_chars(chars: &str) -> Vec<char> {
-    let mut unique: Vec<char> = chars.chars().collect();
+    let mut unique = decode_unicode_escapes(chars);
     unique.push(' ');
     unique.sort();
     unique.dedup();
@@ -168,15 +243,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let scale_size = calculate_scale(
         &font,
         args.height,
-        args.weight,
+        &args.variations,
         args.reference_chars.as_deref(),
         &mut context,
     );
 
     // Build final scaler
     let mut builder = context.builder(font).size(scale_size).hint(true);
-    if let Some(w) = args.weight {
-        builder = builder.variations(Some(swash::Setting::from(("wght", w as f32))));
+    let vars = build_variations(&args.variations);
+    if !vars.is_empty() {
+        builder = builder.variations(vars);
     }
     let mut scaler = builder.build();
 
