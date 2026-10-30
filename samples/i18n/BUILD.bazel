@@ -1,7 +1,7 @@
 """Demonstrates internationalization (i18n) using ciq_localized_strings_jungle.
 
 Build a single device target:
-`bazel build //samples/i18n:i18n_fenix6_debug_build`
+`bazel build @rules_ciq//samples/i18n:sample_fenix6_debug_build`
 """
 
 load(
@@ -75,7 +75,7 @@ DEVICE_IDS_SUPPORTING_WIDGET = [
 ]
 
 ciq_device_targets_macro(
-    name = "i18n",
+    name = "sample",
     device_ids = DEVICE_IDS_SUPPORTING_WIDGET,
     project = ":project",
 )

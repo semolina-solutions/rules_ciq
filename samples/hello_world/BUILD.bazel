@@ -6,18 +6,18 @@ Build an .iq file for export:
 Some other things to try, assuming a "fenix6" device:
 
     Simulate:
-    `bazel run @rules_ciq//samples/hello_world:hello_world_fenix6_debug_simulation`
+    `bazel run @rules_ciq//samples/hello_world:sample_fenix6_debug_simulation`
 
         If installed, try `ibazel run` to automatically rebuild and re-run.
     
     Run unit tests via the simulator:
-    `bazel test @rules_ciq//samples/hello_world:hello_world_fenix6_test`
+    `bazel test @rules_ciq//samples/hello_world:sample_fenix6_test`
     
         If installed, try `ibazel run` to automatically rebuild and re-run.
         Add the --test_output=streamed flag to also log output to the console.
 
     Upload to a physically-connected device:
-    `bazel run @rules_ciq//samples/hello_world:hello_world_fenix6_debug_sideload_app`
+    `bazel run @rules_ciq//samples/hello_world:sample_fenix6_debug_sideload_app`
 """
 
 load(
@@ -83,9 +83,9 @@ DEVICE_IDS_SUPPORTING_DATA_FIELD = [
 
 # This macro generates A LOT of useful targets for building, simulating,
 # testing, and interacting with physical devices. All targets are prefixed
-# with the name of the macro (hello_world_*). See macros.bzl for details.
+# with the name of the macro (sample_*). See macros.bzl for details.
 ciq_device_targets_macro(
-    name = "hello_world",
+    name = "sample",
     device_ids = DEVICE_IDS_SUPPORTING_DATA_FIELD,
     project = ":project",
 )

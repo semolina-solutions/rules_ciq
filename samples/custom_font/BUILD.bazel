@@ -71,7 +71,7 @@ MANIFEST = ciq_manifest_metadata(
 )
 
 ciq_project(
-    name = "sample_project",
+    name = "project",
     jungles = JUNGLES,
     manifest = MANIFEST,
 )
@@ -85,5 +85,5 @@ DEVICE_IDS_SUPPORTING_WIDGET = [
 ciq_device_targets_macro(
     name = "sample",
     device_ids = DEVICE_IDS_SUPPORTING_WIDGET,
-    project = ":sample_project",
+    project = ":project",
 )
