@@ -24,7 +24,7 @@ load(
     "@rules_ciq//:defs.bzl",
     "ciq_export",
     "ciq_jungle",
-    "ciq_manifest",
+    "ciq_manifest_metadata",
     "ciq_project",
     "devices",
     "supports_app_type",
@@ -47,20 +47,6 @@ ciq_jungle(
     sources = glob(["*.mc"]),
 )
 
-# Generates a manifest file for the application.
-# It's also possible to supply a manifest file directly to `ciq_project`, but
-# this `ciq_manifest` takes care of filtering devices based on app type and API
-# level.
-ciq_manifest(
-    name = "generated_manifest",
-    entry = "HelloWorldApp",
-    id = "073c714c-073f-44ed-863b-ccab736d345d",
-    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
-    min_api_level = "1.0.0",
-    name_string_resource_id = NAME_STRING_RESOURCE_ID,
-    type = "data_field",
-)
-
 # All jungles used in the project, included in the order they are listed.
 JUNGLES = [
     "//samples:common_files",
@@ -68,11 +54,22 @@ JUNGLES = [
     ":static_files",
 ]
 
-# Collects the manifest file and jungle assets together.
+TYPE = "data_field"
+
+MANIFEST = ciq_manifest_metadata(
+    entry = "HelloWorldApp",
+    id = "073c714c-073f-44ed-863b-ccab736d345d",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = NAME_STRING_RESOURCE_ID,
+    type = TYPE,
+)
+
+# Collects the manifest metadata and jungle assets together.
 ciq_project(
     name = "project",
     jungles = JUNGLES,
-    manifest = ":generated_manifest",
+    manifest = MANIFEST,
 )
 
 # Use Pythonic list comprehension to make a list of devices that support this
@@ -81,7 +78,7 @@ ciq_project(
 DEVICE_IDS_SUPPORTING_DATA_FIELD = [
     device_id
     for device_id in devices
-    if supports_app_type(device_id, "data_field")
+    if supports_app_type(device_id, TYPE)
 ]
 
 # This macro generates A LOT of useful targets for building, simulating,

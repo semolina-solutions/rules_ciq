@@ -10,7 +10,7 @@ Landscape rectangular screen demo:
 load(
     "@rules_ciq//:defs.bzl",
     "ciq_jungle",
-    "ciq_manifest",
+    "ciq_manifest_metadata",
     "ciq_project",
     "ciq_scaled_drawable_jungle",
     "devices",
@@ -24,15 +24,6 @@ load(
 )
 load(":helpers.bzl", "build_font_height_scaled_symbol_jungles", "device_parameterized_source_jungle")
 
-ciq_manifest(
-    name = "sample_manifest",
-    entry = "SampleApp",
-    id = "513ba728-068b-49b2-9afd-d3bd68c922cb",
-    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
-    min_api_level = "1.0.0",
-    name_string_resource_id = NAME_STRING_RESOURCE_ID,
-    type = "widget",
-)
 
 # Static project files.
 ciq_jungle(
@@ -86,16 +77,27 @@ JUNGLES = [
     ":device_parameterized_sources",
 ] + build_font_height_scaled_symbol_jungles()
 
+TYPE = "widget"
+
+MANIFEST = ciq_manifest_metadata(
+    entry = "SampleApp",
+    id = "513ba728-068b-49b2-9afd-d3bd68c922cb",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = NAME_STRING_RESOURCE_ID,
+    type = TYPE,
+)
+
 ciq_project(
     name = "sample_project",
     jungles = JUNGLES,
-    manifest = ":sample_manifest",
+    manifest = MANIFEST,
 )
 
 DEVICE_IDS_SUPPORTING_WIDGET = [
     device_id
     for device_id in devices
-    if supports_app_type(device_id, "widget")
+    if supports_app_type(device_id, TYPE)
 ]
 
 ciq_device_targets_macro(

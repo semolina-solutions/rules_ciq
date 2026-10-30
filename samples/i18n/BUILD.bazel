@@ -1,0 +1,86 @@
+"""Demonstrates internationalization (i18n) using ciq_localized_strings_jungle.
+
+Build a single device target:
+`bazel build //samples/i18n:i18n_fenix6_debug_build`
+"""
+
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_export",
+    "ciq_jungle",
+    "ciq_localized_strings_jungle",
+    "ciq_manifest_metadata",
+    "ciq_project",
+    "devices",
+    "supports_app_type",
+)
+load(
+    "@rules_ciq//:macros.bzl",
+    "ciq_device_targets_macro",
+)
+load(
+    "//samples:defs.bzl",
+    "LAUNCHER_ICON_DRAWABLE_RESOURCE_ID",
+    "NAME_STRING_RESOURCE_ID",
+)
+
+# Jungle asset containing source files (.mc).
+# Note: String resources are managed separately by ciq_localized_strings_jungle below.
+ciq_jungle(
+    name = "sources",
+    sources = glob(["*.mc"]),
+)
+
+# Jungle asset mapping base strings and localized translations for German and Japanese.
+ciq_localized_strings_jungle(
+    name = "strings",
+    base = "strings.xml",
+    translations = {
+        "deu": "strings-deu.xml",
+        "jpn": "strings-jpn.xml",
+    },
+)
+
+# All jungles used in the project, included in the order they are listed.
+JUNGLES = [
+    "//samples:common_files",
+    "//samples:icon",
+    ":sources",
+    ":strings",
+]
+
+TYPE = "widget"
+
+MANIFEST = ciq_manifest_metadata(
+    entry = "I18nApp",
+    id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
+    min_api_level = "1.0.0",
+    name_string_resource_id = NAME_STRING_RESOURCE_ID,
+    type = TYPE,
+)
+
+# Collects the manifest metadata and jungle assets together. Supported languages
+# are automatically derived from LanguagesInfo in JUNGLES (:strings).
+ciq_project(
+    name = "project",
+    jungles = JUNGLES,
+    manifest = MANIFEST,
+)
+
+DEVICE_IDS_SUPPORTING_WIDGET = [
+    device_id
+    for device_id in devices
+    if supports_app_type(device_id, TYPE)
+]
+
+ciq_device_targets_macro(
+    name = "i18n",
+    device_ids = DEVICE_IDS_SUPPORTING_WIDGET,
+    project = ":project",
+)
+
+ciq_export(
+    name = "i18n",
+    project = ":project",
+)

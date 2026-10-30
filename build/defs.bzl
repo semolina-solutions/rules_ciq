@@ -38,6 +38,61 @@ _APP_TYPE_FORMATS = {
     _APP_TYPE_WIDGET: ["widget", "widget"],
 }
 
+# 36 ISO 639-2 language codes supported by Garmin Connect IQ.
+SUPPORTED_LANGUAGES = [
+    "ara",  # Arabic
+    "bul",  # Bulgarian
+    "ces",  # Czech
+    "dan",  # Danish
+    "deu",  # German
+    "dut",  # Dutch
+    "eng",  # English
+    "est",  # Estonian
+    "fin",  # Finnish
+    "fre",  # French
+    "gre",  # Greek
+    "heb",  # Hebrew
+    "hrv",  # Croatian
+    "hun",  # Hungarian
+    "ind",  # Indonesian
+    "ita",  # Italian
+    "jpn",  # Japanese
+    "kor",  # Korean
+    "lav",  # Latvian
+    "lit",  # Lithuanian
+    "nob",  # Norwegian Bokmål
+    "pol",  # Polish
+    "por",  # Portuguese
+    "ron",  # Romanian
+    "rus",  # Russian
+    "slo",  # Slovak
+    "slv",  # Slovenian
+    "spa",  # Spanish
+    "swe",  # Swedish
+    "tha",  # Thai
+    "tur",  # Turkish
+    "ukr",  # Ukrainian
+    "vie",  # Vietnamese
+    "zhs",  # Simplified Chinese
+    "zht",  # Traditional Chinese
+    "zsm",  # Standard Malay
+]
+
+LanguagesInfo = provider(
+    "Provider for language and internationalization metadata in Garmin Connect IQ projects.",
+    fields = {
+        "iso_639_2_codes": "List of supported ISO 639-2 language codes.",
+    },
+)
+
+def _validate_language_code(target_label, lang):
+    if lang not in SUPPORTED_LANGUAGES:
+        fail("Invalid Connect IQ language code '{}' in target '{}'. Connect IQ requires ISO 639-2 3-letter codes. Supported codes: {}".format(
+            lang,
+            target_label,
+            ", ".join(SUPPORTED_LANGUAGES),
+        ))
+
 JunglesInfo = provider(
     "Provider for jungle files used in Garmin Connect IQ projects.",
     fields = {
@@ -493,6 +548,154 @@ ciq_jungle = rule(
     },
 )
 
+def _ciq_localized_strings_jungle_impl(ctx):
+    jungle_file = ctx.actions.declare_file(ctx.label.name + ".jungle")
+    outputs = [jungle_file]
+
+    base_resource_path = None
+    if ctx.files.base:
+        base_dir = paths.join(ctx.label.name, "resources", "base")
+        base_basenames = {}
+        for base_file in ctx.files.base:
+            basename = base_file.basename
+            count = base_basenames.get(basename, 0)
+            base_basenames[basename] = count + 1
+
+            if count == 0:
+                target_dir = base_dir
+            else:
+                target_dir = paths.join(base_dir, str(count))
+
+            symlinked_file = ctx.actions.declare_file(paths.join(target_dir, basename))
+            outputs.append(symlinked_file)
+            ctx.actions.symlink(
+                output = symlinked_file,
+                target_file = base_file,
+            )
+            if not base_resource_path:
+                base_resource_path = paths.relativize(symlinked_file.dirname, jungle_file.dirname)
+
+    lang_resource_paths = {}
+    lang_basenames = {}
+    codes_seen = {}
+
+    for target, lang in ctx.attr.translations.items():
+        _validate_language_code(ctx.label, lang)
+        codes_seen[lang] = True
+        lang_dir = paths.join(ctx.label.name, "resources", lang)
+        if lang not in lang_basenames:
+            lang_basenames[lang] = {}
+
+        for f in target.files.to_list():
+            basename = f.basename
+            count = lang_basenames[lang].get(basename, 0)
+            lang_basenames[lang][basename] = count + 1
+
+            if count == 0:
+                target_dir = lang_dir
+            else:
+                target_dir = paths.join(lang_dir, str(count))
+
+            symlinked_file = ctx.actions.declare_file(paths.join(target_dir, basename))
+            outputs.append(symlinked_file)
+            ctx.actions.symlink(
+                output = symlinked_file,
+                target_file = f,
+            )
+            if lang not in lang_resource_paths:
+                lang_resource_paths[lang] = paths.relativize(symlinked_file.dirname, jungle_file.dirname)
+
+    codes = sorted(codes_seen.keys())
+
+    jungle_content = ""
+    for device_id in ctx.attr.device_ids:
+        if base_resource_path:
+            jungle_content += "{id}.resourcePath = $({id}.resourcePath);{dir}\n".format(
+                id = device_id,
+                dir = base_resource_path,
+            )
+        for lang in codes:
+            if lang in lang_resource_paths:
+                jungle_content += "{id}.lang.{lang} = $({id}.lang.{lang});{dir}\n".format(
+                    id = device_id,
+                    lang = lang,
+                    dir = lang_resource_paths[lang],
+                )
+
+    ctx.actions.write(jungle_file, jungle_content)
+
+    return [
+        JunglesInfo(jungle_files = [jungle_file]),
+        LanguagesInfo(iso_639_2_codes = codes),
+        DefaultInfo(files = depset(outputs)),
+    ]
+
+_ciq_localized_strings_jungle = rule(
+    implementation = _ciq_localized_strings_jungle_impl,
+    doc = "Generates a jungle file mapping base and localized string resources for specific devices.",
+    attrs = {
+        "base": attr.label_list(
+            doc = "Optional list of base/fallback XML string resource files.",
+            allow_files = True,
+        ),
+        "translations": attr.label_keyed_string_dict(
+            doc = "Dictionary mapping string resource file labels to ISO 639-2 language codes.",
+            mandatory = True,
+            allow_files = True,
+        ),
+        "device_ids": attr.string_list(
+            doc = "List of device IDs to generate jungle entries for.",
+            default = devices.keys(),
+        ),
+    },
+)
+
+def ciq_localized_strings_jungle(name, translations, base = None, device_ids = None, **kwargs):
+    """Generates a jungle file mapping localized string resources (and optional base strings).
+
+    This rule isolates each language's XML string files into its own resource
+    directory, avoiding filename collisions and emitting the appropriate
+    `{device}.lang.<language>` qualifiers.
+
+    IMPORTANT: To avoid duplicate resource ID collisions in Monkey C, ensure
+    that any localized string files passed to this rule are NOT included in
+    generic `ciq_jungle` resource globs. For example:
+        ciq_jungle(
+            name = "static_resources",
+            resources = glob(
+                include = ["resources/common/**/*"],
+                exclude = ["resources/common/strings/**/*"],
+            ),
+        )
+
+    Args:
+        name: A unique target name.
+        translations: Dictionary mapping ISO 639-2 language codes (e.g., 'deu', 'fin') to a label, file, or list of labels/files containing localized string XML resources.
+        base: Optional label, file, or list of labels/files for base (fallback) string resources registered on the default resourcePath.
+        device_ids: List of device IDs to generate jungle entries for. Defaults to all devices.
+        **kwargs: Additional rule arguments.
+    """
+    file_to_lang = {}
+    for lang, files in translations.items():
+        file_list = files if type(files) == "list" else [files]
+        for f in file_list:
+            file_to_lang[f] = lang
+
+    base_list = []
+    if base != None:
+        base_list = base if type(base) == "list" else [base]
+
+    rule_kwargs = {}
+    if device_ids != None:
+        rule_kwargs["device_ids"] = device_ids
+
+    _ciq_localized_strings_jungle(
+        name = name,
+        base = base_list,
+        translations = file_to_lang,
+        **dict(rule_kwargs, **kwargs)
+    )
+
 def _check_app_type_exact(device_id, app_type):
     """Checks if a device explicitly supports a specific app type in its compiler.json.
 
@@ -582,7 +785,9 @@ _MANIFEST_TEMPLATE = """
         <iq:permissions>
             {permissions}
         </iq:permissions>
-        <iq:languages/>
+        <iq:languages>
+            {languages}
+        </iq:languages>
         <iq:barrels/>
     </iq:application>
 </iq:manifest>
@@ -601,6 +806,24 @@ def _ciq_manifest_impl(ctx):
     permissions = ""
     for permission in ctx.attr.permissions:
         permissions += """<iq:uses-permission id="{}"/>""".format(permission)
+
+    languages_seen = {}
+    if ctx.attr.languages:
+        for lang in ctx.attr.languages:
+            _validate_language_code(ctx.label, lang)
+            languages_seen[lang] = True
+
+    if ctx.attr.jungles:
+        for jungle in ctx.attr.jungles:
+            if LanguagesInfo in jungle:
+                for lang in jungle[LanguagesInfo].iso_639_2_codes:
+                    _validate_language_code(ctx.label, lang)
+                    languages_seen[lang] = True
+
+    languages = ""
+    for lang in sorted(languages_seen.keys()):
+        languages += """<iq:language>{}</iq:language>""".format(lang)
+
     ctx.actions.write(
         manifest_file,
         """<?xml version="1.0"?>""" + _MANIFEST_TEMPLATE.format(
@@ -612,6 +835,7 @@ def _ciq_manifest_impl(ctx):
             min_api_level = ctx.attr.min_api_level,
             products = products,
             permissions = permissions,
+            languages = languages,
         ),
     )
     return [
@@ -620,9 +844,9 @@ def _ciq_manifest_impl(ctx):
         ),
     ]
 
-ciq_manifest = rule(
+_ciq_manifest = rule(
     implementation = _ciq_manifest_impl,
-    doc = "Generates a manifest.xml file for the application.",
+    doc = "Internal rule generating a manifest.xml file for the application.",
     attrs = {
         "id": attr.string(
             doc = "Unique application ID (as a UUID).",
@@ -652,6 +876,14 @@ ciq_manifest = rule(
         "permissions": attr.string_list(
             doc = "List of permissions required by the application (e.g., ['Positioning', 'Communications']).",
         ),
+        "languages": attr.string_list(
+            doc = "List of ISO 639-2 language codes supported by the application (e.g. ['deu', 'fin']).",
+            default = [],
+        ),
+        "jungles": attr.label_list(
+            doc = "Optional list of jungle targets to discover LanguagesInfo languages from.",
+            providers = [JunglesInfo],
+        ),
         "device_ids": attr.string_list(
             doc = "List of device IDs to include in the manifest. Devices are filtered by app type and API level support.",
             default = devices.keys(),
@@ -659,12 +891,55 @@ ciq_manifest = rule(
     },
 )
 
+def ciq_manifest_metadata(
+        id,
+        entry,
+        type,
+        name_string_resource_id,
+        launcher_icon_drawable_resource_id,
+        min_api_level = "1.0.0",
+        permissions = [],
+        languages = [],
+        device_ids = None):
+    """Encapsulates metadata for a Connect IQ application manifest to be generated by ciq_project.
+
+    Args:
+        id: Unique application ID (as a UUID string).
+        entry: Entry point class name for the application (e.g., 'MyApp').
+        type: Application type ('audio_content_provider', 'data_field', 'watch_face', 'widget', or 'watchApp').
+        name_string_resource_id: String resource ID for the application name.
+        launcher_icon_drawable_resource_id: Drawable resource ID for the launcher icon.
+        min_api_level: Minimum Connect IQ API level required (default: '1.0.0').
+        permissions: List of permissions required by the application.
+        languages: Optional explicit list of ISO 639-2 language codes (if omitted, derived from LanguagesInfo in project jungles).
+        device_ids: Optional list of device IDs to include in the manifest.
+
+    Returns:
+        A struct containing the manifest metadata.
+    """
+    return struct(
+        id = id,
+        entry = entry,
+        type = type,
+        name_string_resource_id = name_string_resource_id,
+        launcher_icon_drawable_resource_id = launcher_icon_drawable_resource_id,
+        min_api_level = min_api_level,
+        permissions = permissions,
+        languages = languages,
+        device_ids = device_ids,
+    )
+
+_PROJECT_JUNGLE_LANG_NEUTRALIZATIONS = "\n".join([
+    "base.lang.{} = nowhere".format(lang)
+    for lang in SUPPORTED_LANGUAGES
+])
+
 _PROJECT_JUNGLE_TEMPLATE = """
 project.manifest = {manifest}
 base.sourcePath = nowhere
 base.resourcePath = nowhere
 base.personality = nowhere
-"""
+""" + _PROJECT_JUNGLE_LANG_NEUTRALIZATIONS + "\n"
 
 def _ciq_project_impl(ctx):
     name = ctx.label.name
@@ -693,12 +968,12 @@ def _ciq_project_impl(ctx):
         ),
     ]
 
-ciq_project = rule(
+_ciq_project = rule(
     implementation = _ciq_project_impl,
     doc = "Defines a Connect IQ project, linking a manifest file with jungle files and resources.",
     attrs = {
         "manifest": attr.label(
-            doc = "The manifest.xml file for the project (typically from ciq_manifest).",
+            doc = "The manifest.xml file for the project (typically from _ciq_manifest).",
             mandatory = True,
             allow_single_file = True,
         ),
@@ -710,6 +985,56 @@ ciq_project = rule(
         ),
     },
 )
+
+def ciq_project(name, jungles, manifest, **kwargs):
+    """Defines a Connect IQ project, linking a manifest file with jungle files and resources.
+
+    The `manifest` parameter can either be:
+    - A manifest file label / target (e.g. `manifest = "manifest.xml"` or `manifest = ":my_manifest"`)
+    - A metadata struct created by `ciq_manifest_metadata(...)` or a metadata dictionary.
+      When metadata is provided, the manifest is generated automatically and will
+      auto-detect supported languages from `jungles`.
+
+    Args:
+        name: Target name for the project.
+        jungles: List of jungle asset targets containing sources and resources.
+        manifest: Either a manifest file target (e.g. "manifest.xml") or metadata from ciq_manifest_metadata(...).
+        **kwargs: Additional arguments forwarded to the project rule.
+    """
+    if hasattr(manifest, "id") or type(manifest) == "dict":
+        manifest_meta = dict(
+            id = manifest.id,
+            entry = manifest.entry,
+            type = manifest.type,
+            name_string_resource_id = manifest.name_string_resource_id,
+            launcher_icon_drawable_resource_id = manifest.launcher_icon_drawable_resource_id,
+            min_api_level = manifest.min_api_level,
+            permissions = manifest.permissions,
+            languages = manifest.languages,
+            device_ids = getattr(manifest, "device_ids", None),
+        ) if hasattr(manifest, "id") else dict(manifest)
+
+        device_ids = manifest_meta.pop("device_ids", None)
+        manifest_kwargs = {}
+        if device_ids != None:
+            manifest_kwargs["device_ids"] = device_ids
+
+        manifest_target_name = name + "_manifest"
+        _ciq_manifest(
+            name = manifest_target_name,
+            jungles = jungles,
+            **dict(manifest_meta, **manifest_kwargs)
+        )
+        manifest_label = ":" + manifest_target_name
+    else:
+        manifest_label = manifest
+
+    _ciq_project(
+        name = name,
+        manifest = manifest_label,
+        jungles = jungles,
+        **kwargs
+    )
 
 DeviceBuildInfo = provider(
     "Provider for Garmin Connect IQ device build outputs.",

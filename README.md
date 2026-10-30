@@ -66,24 +66,31 @@ project for an introductory example. As a minimal demonstration, here is what to
 the `BUILD.bazel` file to generate an app manifest for a widget file:
 
     ```python
-    load("@rules_ciq//:defs.bzl", "ciq_manifest")
+    load(
+        "@rules_ciq//:defs.bzl",
+        "ciq_manifest_metadata",
+        "ciq_project",
+    )
 
-    ciq_manifest(
-        name = "my_manifest",
-        entry = "MyApp",
-        id = "00000000-0000-0000-0000-000000000001",
-        launcher_icon_drawable_resource_id = "MyLauncherIconResource",
-        min_api_level = "3.0.0",
-        name_string_resource_id = "MyAppNameResource",
-        type = "widget",
+    ciq_project(
+        name = "my_project",
+        jungles = [":sources"],
+        manifest = ciq_manifest_metadata(
+            entry = "MyApp",
+            id = "00000000-0000-0000-0000-000000000001",
+            launcher_icon_drawable_resource_id = "MyLauncherIconResource",
+            min_api_level = "3.0.0",
+            name_string_resource_id = "MyAppNameResource",
+            type = "widget",
+        ),
     )
     ```
 1. Build, run or test your Bazel targets using `bazel build`, `bazel run`, or
-`bazel test`. To generate the manifest file from the minimal example above, in
+`bazel test`. To build the project from the minimal example above, in
 the same directory as the `BUILD.bazel` file, run in the terminal:
 
     ```bash
-    bazel build my_manifest
+    bazel build my_project
     ```
 
     The generated file will be written to the `bazel-bin` directory. You can
@@ -96,6 +103,7 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
 | Sample | Purpose |
 | --- | --- |
 | **[samples/hello_world](samples/hello_world)** | Introductory example demonstrating project structure, manifest generation, simulating, unit testing, uploading to physical devices, and `.iq` export. |
+| **[samples/i18n](samples/i18n)** | Demonstrates internationalization (i18n) and localized string resources with automatic manifest language detection. |
 | **[samples/device_parametrics](samples/device_parametrics)** | Illustrates how to generate device-specific resources like icons and backgrounds. |
 | **[samples/custom_font](samples/custom_font)** | Examples of generating custom bitmap fonts, including scaling relative to screen size or matching native SDK font heights. |
 | **[samples/screen_ppi](samples/screen_ppi)** | Demonstrates how to scale resources based on physical screen dimensions. |

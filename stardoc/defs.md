@@ -135,53 +135,11 @@ Generates a jungle file mapping sources and resources for specific devices.
 | <a id="ciq_jungle-sources"></a>sources |  List of source files (.mc) to include in the jungle file.  | LABEL_LIST | false |  []  |
 
 
-<a id="ciq_manifest"></a>
-
-
-<pre>
-ciq_manifest(<a href="#ciq_manifest-name">name</a>, <a href="#ciq_manifest-device_ids">device_ids</a>, <a href="#ciq_manifest-entry">entry</a>, <a href="#ciq_manifest-id">id</a>, <a href="#ciq_manifest-launcher_icon_drawable_resource_id">launcher_icon_drawable_resource_id</a>, <a href="#ciq_manifest-min_api_level">min_api_level</a>, <a href="#ciq_manifest-name_string_resource_id">name_string_resource_id</a>, <a href="#ciq_manifest-permissions">permissions</a>, <a href="#ciq_manifest-type">type</a>)
-</pre>
-
-Generates a manifest.xml file for the application.
-
-**ATTRIBUTES**
-
-| Name | Description | Type | Mandatory | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| <a id="ciq_manifest-name"></a>name |  A unique name for this target.  | NAME | true |    |
-| <a id="ciq_manifest-device_ids"></a>device_ids |  List of device IDs to include in the manifest. Devices are filtered by app type and API level support.  | STRING_LIST | false |  *All devices*  |
-| <a id="ciq_manifest-entry"></a>entry |  Entry point class name for the application (e.g., 'MyApp').  | STRING | true |    |
-| <a id="ciq_manifest-id"></a>id |  Unique application ID (as a UUID).  | STRING | true |    |
-| <a id="ciq_manifest-launcher_icon_drawable_resource_id"></a>launcher_icon_drawable_resource_id |  Drawable resource ID for the launcher icon.  | STRING | true |    |
-| <a id="ciq_manifest-min_api_level"></a>min_api_level |  Minimum Connect IQ API level required (e.g., '3.0.0').  | STRING | true |    |
-| <a id="ciq_manifest-name_string_resource_id"></a>name_string_resource_id |  String resource ID for the application name (e.g., 'AppName').  | STRING | true |    |
-| <a id="ciq_manifest-permissions"></a>permissions |  List of permissions required by the application (e.g., ['Positioning', 'Communications']).  | STRING_LIST | false |  []  |
-| <a id="ciq_manifest-type"></a>type |  Application type: 'audio_content_provider', 'data_field', 'watch_face', 'widget', or 'watchApp'.  | STRING | true |    |
-
-
-<a id="ciq_project"></a>
-
-
-<pre>
-ciq_project(<a href="#ciq_project-name">name</a>, <a href="#ciq_project-jungles">jungles</a>, <a href="#ciq_project-manifest">manifest</a>)
-</pre>
-
-Defines a Connect IQ project, linking a manifest file with jungle files and resources.
-
-**ATTRIBUTES**
-
-| Name | Description | Type | Mandatory | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| <a id="ciq_project-name"></a>name |  A unique name for this target.  | NAME | true |    |
-| <a id="ciq_project-jungles"></a>jungles |  List of jungle assets (typically from ciq_jungle or ciq_scaled_drawable_jungle) containing sources and resources.  | LABEL_LIST | true |    |
-| <a id="ciq_project-manifest"></a>manifest |  The manifest.xml file for the project (typically from ciq_manifest).  | LABEL | true |    |
-
-
 <a id="ciq_scaled_bmfont_jungle"></a>
 
 
 <pre>
-ciq_scaled_bmfont_jungle(<a href="#ciq_scaled_bmfont_jungle-name">name</a>, <a href="#ciq_scaled_bmfont_jungle-anti_alias">anti_alias</a>, <a href="#ciq_scaled_bmfont_jungle-chars">chars</a>, <a href="#ciq_scaled_bmfont_jungle-device_dependent_height">device_dependent_height</a>, <a href="#ciq_scaled_bmfont_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_bmfont_jungle-font">font</a>, <a href="#ciq_scaled_bmfont_jungle-font_resource_id">font_resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-metrics_resource_id">metrics_resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-percent">percent</a>, <a href="#ciq_scaled_bmfont_jungle-reference_chars">reference_chars</a>, <a href="#ciq_scaled_bmfont_jungle-snap">snap</a>, <a href="#ciq_scaled_bmfont_jungle-weight">weight</a>)
+ciq_scaled_bmfont_jungle(<a href="#ciq_scaled_bmfont_jungle-name">name</a>, <a href="#ciq_scaled_bmfont_jungle-anti_alias">anti_alias</a>, <a href="#ciq_scaled_bmfont_jungle-chars">chars</a>, <a href="#ciq_scaled_bmfont_jungle-device_dependent_height">device_dependent_height</a>, <a href="#ciq_scaled_bmfont_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_bmfont_jungle-font">font</a>, <a href="#ciq_scaled_bmfont_jungle-font_resource_id">font_resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-metrics_resource_id">metrics_resource_id</a>, <a href="#ciq_scaled_bmfont_jungle-percent">percent</a>, <a href="#ciq_scaled_bmfont_jungle-reference_chars">reference_chars</a>, <a href="#ciq_scaled_bmfont_jungle-snap">snap</a>, <a href="#ciq_scaled_bmfont_jungle-variations">variations</a>)
 </pre>
 
 Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font for specific devices.
@@ -201,14 +159,14 @@ Generates a BMFont (.fnt and .png) and fonts.xml from a TrueType/OpenType font f
 | <a id="ciq_scaled_bmfont_jungle-percent"></a>percent |  Percentage of the base size to scale to (100 = original size).  | INT | false |  100  |
 | <a id="ciq_scaled_bmfont_jungle-reference_chars"></a>reference_chars |  String of characters to use as a height reference for scaling. If unspecified, no additional scaling is applied.  | STRING | false |  ""  |
 | <a id="ciq_scaled_bmfont_jungle-snap"></a>snap |  Pixel multiple to snap scaled font to.  | INT | false |  1  |
-| <a id="ciq_scaled_bmfont_jungle-weight"></a>weight |  Font weight for variable fonts (e.g. 100 to 900). Default is 0 (use default).  | INT | false |  0  |
+| <a id="ciq_scaled_bmfont_jungle-variations"></a>variations |  Dictionary of font variation axis tags to values (e.g. {'FILL': '1', 'wght': '700'}).  | STRING_DICT | false |  {}  |
 
 
 <a id="ciq_scaled_drawable_jungle"></a>
 
 
 <pre>
-ciq_scaled_drawable_jungle(<a href="#ciq_scaled_drawable_jungle-name">name</a>, <a href="#ciq_scaled_drawable_jungle-src">src</a>, <a href="#ciq_scaled_drawable_jungle-device_dependent_height">device_dependent_height</a>, <a href="#ciq_scaled_drawable_jungle-device_dependent_width">device_dependent_width</a>, <a href="#ciq_scaled_drawable_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_drawable_jungle-percent">percent</a>, <a href="#ciq_scaled_drawable_jungle-resource_id">resource_id</a>)
+ciq_scaled_drawable_jungle(<a href="#ciq_scaled_drawable_jungle-name">name</a>, <a href="#ciq_scaled_drawable_jungle-src">src</a>, <a href="#ciq_scaled_drawable_jungle-automatic_palette">automatic_palette</a>, <a href="#ciq_scaled_drawable_jungle-device_dependent_height">device_dependent_height</a>, <a href="#ciq_scaled_drawable_jungle-device_dependent_width">device_dependent_width</a>, <a href="#ciq_scaled_drawable_jungle-device_ids">device_ids</a>, <a href="#ciq_scaled_drawable_jungle-percent">percent</a>, <a href="#ciq_scaled_drawable_jungle-resource_id">resource_id</a>)
 </pre>
 
 Generates a jungle file for a scaled drawable resource.
@@ -219,6 +177,7 @@ Generates a jungle file for a scaled drawable resource.
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_scaled_drawable_jungle-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_scaled_drawable_jungle-src"></a>src |  Source image file to scale for different devices.  | LABEL | true |    |
+| <a id="ciq_scaled_drawable_jungle-automatic_palette"></a>automatic_palette |  Whether to enable automatic palette reduction in the generated drawables.xml.  | BOOLEAN | false |  True  |
 | <a id="ciq_scaled_drawable_jungle-device_dependent_height"></a>device_dependent_height |  Metric target to use for height scaling.  | LABEL | false |  None  |
 | <a id="ciq_scaled_drawable_jungle-device_dependent_width"></a>device_dependent_width |  Metric target to use for width scaling.  | LABEL | false |  None  |
 | <a id="ciq_scaled_drawable_jungle-device_ids"></a>device_ids |  List of device IDs to generate scaled resources for.  | STRING_LIST | false |  *All devices*  |
@@ -352,6 +311,25 @@ Provider for jungle files used in Garmin Connect IQ projects.
 | <a id="JunglesInfo-jungle_files"></a>jungle_files |  List of jungle files that define source and resource paths per device.    |
 
 
+<a id="LanguagesInfo"></a>
+
+## LanguagesInfo
+
+<pre>
+load("@rules_ciq//:defs.bzl", "LanguagesInfo")
+
+LanguagesInfo(<a href="#LanguagesInfo-iso_639_2_codes">iso_639_2_codes</a>)
+</pre>
+
+Provider for language and internationalization metadata in Garmin Connect IQ projects.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="LanguagesInfo-iso_639_2_codes"></a>iso_639_2_codes |  List of supported ISO 639-2 language codes.    |
+
+
 <a id="ManifestInfo"></a>
 
 ## ManifestInfo
@@ -369,6 +347,104 @@ Provider for Garmin Connect IQ manifest file.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="ManifestInfo-manifest_file"></a>manifest_file |  The manifest.xml file that defines the application metadata and supported devices.    |
+
+
+<a id="ciq_localized_strings_jungle"></a>
+
+
+<pre>
+ciq_localized_strings_jungle(<a href="#ciq_localized_strings_jungle-name">name</a>, <a href="#ciq_localized_strings_jungle-translations">translations</a>, <a href="#ciq_localized_strings_jungle-base">base</a>, <a href="#ciq_localized_strings_jungle-device_ids">device_ids</a>, <a href="#ciq_localized_strings_jungle-kwargs">kwargs</a>)
+</pre>
+
+Generates a jungle file mapping localized string resources (and optional base strings).
+
+This rule isolates each language's XML string files into its own resource
+directory, avoiding filename collisions and emitting the appropriate
+`{device}.lang.<language>` qualifiers.
+
+IMPORTANT: To avoid duplicate resource ID collisions in Monkey C, ensure
+that any localized string files passed to this rule are NOT included in
+generic `ciq_jungle` resource globs. For example:
+    ciq_jungle(
+        name = "static_resources",
+        resources = glob(
+            include = ["resources/common/**/*"],
+            exclude = ["resources/common/strings/**/*"],
+        ),
+    )
+
+
+**PARAMETERS**
+
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+| <a id="ciq_localized_strings_jungle-name"></a>name |  A unique target name.  |    |
+| <a id="ciq_localized_strings_jungle-translations"></a>translations |  Dictionary mapping ISO 639-2 language codes (e.g., 'deu', 'fin') to a label, file, or list of labels/files containing localized string XML resources.  |    |
+| <a id="ciq_localized_strings_jungle-base"></a>base |  Optional label, file, or list of labels/files for base (fallback) string resources registered on the default resourcePath.  |  None  |
+| <a id="ciq_localized_strings_jungle-device_ids"></a>device_ids |  List of device IDs to generate jungle entries for. Defaults to all devices.  |  *All devices*  |
+| <a id="ciq_localized_strings_jungle-kwargs"></a>kwargs |  Additional rule arguments.  |    |
+
+**RETURNS**
+
+
+
+
+<a id="ciq_manifest_metadata"></a>
+
+
+<pre>
+ciq_manifest_metadata(<a href="#ciq_manifest_metadata-id">id</a>, <a href="#ciq_manifest_metadata-entry">entry</a>, <a href="#ciq_manifest_metadata-type">type</a>, <a href="#ciq_manifest_metadata-name_string_resource_id">name_string_resource_id</a>, <a href="#ciq_manifest_metadata-launcher_icon_drawable_resource_id">launcher_icon_drawable_resource_id</a>, <a href="#ciq_manifest_metadata-min_api_level">min_api_level</a>, <a href="#ciq_manifest_metadata-permissions">permissions</a>, <a href="#ciq_manifest_metadata-languages">languages</a>, <a href="#ciq_manifest_metadata-device_ids">device_ids</a>)
+</pre>
+
+Encapsulates metadata for a Connect IQ application manifest to be generated by ciq_project.
+
+**PARAMETERS**
+
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+| <a id="ciq_manifest_metadata-id"></a>id |  Unique application ID (as a UUID string).  |    |
+| <a id="ciq_manifest_metadata-entry"></a>entry |  Entry point class name for the application (e.g., 'MyApp').  |    |
+| <a id="ciq_manifest_metadata-type"></a>type |  Application type ('audio_content_provider', 'data_field', 'watch_face', 'widget', or 'watchApp').  |    |
+| <a id="ciq_manifest_metadata-name_string_resource_id"></a>name_string_resource_id |  String resource ID for the application name.  |    |
+| <a id="ciq_manifest_metadata-launcher_icon_drawable_resource_id"></a>launcher_icon_drawable_resource_id |  Drawable resource ID for the launcher icon.  |    |
+| <a id="ciq_manifest_metadata-min_api_level"></a>min_api_level |  Minimum Connect IQ API level required (default: '1.0.0').  |  "1.0.0"  |
+| <a id="ciq_manifest_metadata-permissions"></a>permissions |  List of permissions required by the application.  |  []  |
+| <a id="ciq_manifest_metadata-languages"></a>languages |  Optional explicit list of ISO 639-2 language codes (if omitted, derived from LanguagesInfo in project jungles).  |  []  |
+| <a id="ciq_manifest_metadata-device_ids"></a>device_ids |  Optional list of device IDs to include in the manifest.  |  *All devices*  |
+
+**RETURNS**
+
+A struct containing the manifest metadata.
+
+
+<a id="ciq_project"></a>
+
+
+<pre>
+ciq_project(<a href="#ciq_project-name">name</a>, <a href="#ciq_project-jungles">jungles</a>, <a href="#ciq_project-manifest">manifest</a>, <a href="#ciq_project-kwargs">kwargs</a>)
+</pre>
+
+Defines a Connect IQ project, linking a manifest file with jungle files and resources.
+
+The `manifest` parameter can either be:
+- A manifest file label / target (e.g. `manifest = "manifest.xml"` or `manifest = ":my_manifest"`)
+- A metadata struct created by `ciq_manifest_metadata(...)` or a metadata dictionary.
+  When metadata is provided, the manifest is generated automatically and will
+  auto-detect supported languages from `jungles`.
+
+
+**PARAMETERS**
+
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+| <a id="ciq_project-name"></a>name |  Target name for the project.  |    |
+| <a id="ciq_project-jungles"></a>jungles |  List of jungle asset targets containing sources and resources.  |    |
+| <a id="ciq_project-manifest"></a>manifest |  Either a manifest file target (e.g. "manifest.xml") or metadata from ciq_manifest_metadata(...).  |    |
+| <a id="ciq_project-kwargs"></a>kwargs |  Additional arguments forwarded to the project rule.  |    |
+
+**RETURNS**
+
+
 
 
 <a id="ciq_store_image"></a>
