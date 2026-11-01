@@ -146,34 +146,40 @@ bzl_library(
 exports_files(["devices.json"])
 """
 
-_ENSURE_SDK_SNIPPET = """if [ ! -d "{sdk_dir}" ] && [ -n "{sdk_manager_bin}" ]; then
+_ENSURE_SDK_SNIPPET = """if [ ! -f "{sdk_dir}/.complete" ] && [ -n "{sdk_manager_bin}" ]; then
   lockdir="{hermetic_home}/.sdk_download_{version}.lock"
   while ! mkdir "$lockdir" 2>/dev/null; do
     sleep 1
   done
   trap 'rmdir "$lockdir" 2>/dev/null || true' EXIT
-  if [ ! -d "{sdk_dir}" ]; then
-    "{sdk_manager_bin}" sdk download "{version}" >&2
+  if [ ! -f "{sdk_dir}/.complete" ]; then
+    if [ ! -f "{sdk_dir}/bin/monkeybrains.jar" ]; then
+      rm -rf "{sdk_dir}"
+      "{sdk_manager_bin}" sdk download "{version}" >&2
+    fi
+    touch "{sdk_dir}/.complete"
   fi
   rmdir "$lockdir" 2>/dev/null || true
   trap - EXIT
 fi"""
 
-_MONKEYC_WRAPPER_TEMPLATE = """#!/usr/bin/env bash
+_MONKEYC_WRAPPER_TEMPLATE = """#!/bin/bash
 set -euo pipefail
-export PATH="${{PATH:-/usr/bin:/bin:/usr/sbin:/sbin}}"
+export PATH="${{PATH:+$PATH:}}/usr/bin:/bin:/usr/sbin:/sbin"
+export MSYS2_ARG_CONV_EXCL="*"
 export HOME="{hermetic_home}"
 export USERPROFILE="{hermetic_home}"
 export CFFIXED_USER_HOME="{hermetic_home}"
 export APPDATA="{hermetic_home}/AppData/Roaming"
 export JAVA_TOOL_OPTIONS="${{JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }}-Duser.home={hermetic_home}"
 """ + _ENSURE_SDK_SNIPPET + """
-exec bash "{monkeyc_path}" "$@"
+exec "{java_bin}" -Xms1g -Dfile.encoding=UTF-8 -Dapple.awt.UIElement=true -classpath "{sdk_dir}/bin/monkeybrains.jar" com.garmin.monkeybrains.Monkeybrains "$@"
 """
 
-_SHELL_WRAPPER_TEMPLATE = """#!/usr/bin/env bash
+_SHELL_WRAPPER_TEMPLATE = """#!/bin/bash
 set -euo pipefail
-export PATH="${{PATH:-/usr/bin:/bin:/usr/sbin:/sbin}}"
+export PATH="${{PATH:+$PATH:}}/usr/bin:/bin:/usr/sbin:/sbin"
+export MSYS2_ARG_CONV_EXCL="*"
 export HOME="{hermetic_home}"
 export USERPROFILE="{hermetic_home}"
 export CFFIXED_USER_HOME="{hermetic_home}"
@@ -182,9 +188,10 @@ export APPDATA="{hermetic_home}/AppData/Roaming"
 exec "{shell_path}" "$@"
 """
 
-_SIMULATOR_WRAPPER_TEMPLATE = """#!/usr/bin/env bash
+_SIMULATOR_WRAPPER_TEMPLATE = """#!/bin/bash
 set -euo pipefail
-export PATH="${{PATH:-/usr/bin:/bin:/usr/sbin:/sbin}}"
+export PATH="${{PATH:+$PATH:}}/usr/bin:/bin:/usr/sbin:/sbin"
+export MSYS2_ARG_CONV_EXCL="*"
 export HOME="{hermetic_home}"
 export USERPROFILE="{hermetic_home}"
 export CFFIXED_USER_HOME="{hermetic_home}"
@@ -293,7 +300,6 @@ def _os_config(repository_ctx):
         return struct(
             ciq_rel_path = "Library/Application Support/Garmin/ConnectIQ",
             sdks_json_key = "mac",
-            monkeyc_bin = "monkeyc",
             shell_bin = "shell",
             simulator_bin = "ConnectIQ.app/Contents/MacOS/simulator",
         )
@@ -301,7 +307,6 @@ def _os_config(repository_ctx):
         return struct(
             ciq_rel_path = ".Garmin/ConnectIQ",
             sdks_json_key = "linux",
-            monkeyc_bin = "monkeyc",
             shell_bin = "shell",
             simulator_bin = "simulator",
         )
@@ -309,7 +314,6 @@ def _os_config(repository_ctx):
         return struct(
             ciq_rel_path = "AppData/Roaming/Garmin/ConnectIQ",
             sdks_json_key = "windows",
-            monkeyc_bin = "monkeyc",
             shell_bin = "shell.exe",
             simulator_bin = "simulator.exe",
         )
@@ -324,8 +328,11 @@ def _sdk_version_from_folder_name(name):
         return None
     return parts[3]
 
-def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_manager_bin, os_cfg):
-    raw_monkeyc_path = paths.join(sdk_dir, "bin", os_cfg.monkeyc_bin)
+def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_manager_bin, java_bin, os_cfg):
+    sdk_dir = sdk_dir.replace("\\", "/")
+    hermetic_home = hermetic_home.replace("\\", "/")
+    sdk_manager_bin = (sdk_manager_bin or "").replace("\\", "/")
+    java_bin = (java_bin or "java").replace("\\", "/")
     raw_shell_path = paths.join(sdk_dir, "bin", os_cfg.shell_bin)
     raw_simulator_path = paths.join(sdk_dir, "bin", os_cfg.simulator_bin)
 
@@ -338,10 +345,10 @@ def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_
         _MONKEYC_WRAPPER_TEMPLATE.format(
             hermetic_home = hermetic_home,
             sdk_dir = sdk_dir,
-            sdk_manager_bin = sdk_manager_bin or "",
+            sdk_manager_bin = sdk_manager_bin,
+            java_bin = java_bin,
             version = version,
-            monkeyc_path = raw_monkeyc_path,
-        ),
+        ).replace("\r\n", "\n"),
         executable = True,
     )
     repository_ctx.file(
@@ -349,10 +356,10 @@ def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_
         _SHELL_WRAPPER_TEMPLATE.format(
             hermetic_home = hermetic_home,
             sdk_dir = sdk_dir,
-            sdk_manager_bin = sdk_manager_bin or "",
+            sdk_manager_bin = sdk_manager_bin,
             version = version,
             shell_path = raw_shell_path,
-        ),
+        ).replace("\r\n", "\n"),
         executable = True,
     )
     repository_ctx.file(
@@ -360,16 +367,16 @@ def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_
         _SIMULATOR_WRAPPER_TEMPLATE.format(
             hermetic_home = hermetic_home,
             sdk_dir = sdk_dir,
-            sdk_manager_bin = sdk_manager_bin or "",
+            sdk_manager_bin = sdk_manager_bin,
             version = version,
             simulator_path = raw_simulator_path,
-        ),
+        ).replace("\r\n", "\n"),
         executable = True,
     )
     return struct(
-        monkeyc_path = str(repository_ctx.path(monkeyc_rel)),
-        shell_path = str(repository_ctx.path(shell_rel)),
-        simulator_path = str(repository_ctx.path(simulator_rel)),
+        monkeyc_path = str(repository_ctx.path(monkeyc_rel)).replace("\\", "/"),
+        shell_path = str(repository_ctx.path(shell_rel)).replace("\\", "/"),
+        simulator_path = str(repository_ctx.path(simulator_rel)).replace("\\", "/"),
     )
 
 def _populate_ciq_repo(
@@ -402,6 +409,8 @@ def _populate_ciq_repo(
     if not sdk_dirs_by_version:
         fail("No Garmin Connect IQ SDKs found in {}".format(sdks_dir_path))
 
+    java_path = repository_ctx.which("java")
+    java_bin = str(java_path).replace("\\", "/") if java_path else "java"
     sorted_versions = sorted(sdk_dirs_by_version.keys())
     wrapper_blocks = []
     for version in sorted_versions:
@@ -411,6 +420,7 @@ def _populate_ciq_repo(
             sdk_dirs_by_version[version],
             hermetic_home,
             sdk_manager_bin,
+            java_bin,
             os_cfg,
         )
         wrapper_blocks.append(

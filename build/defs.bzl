@@ -1121,7 +1121,7 @@ def _ciq_device_build_impl(ctx):
         command = """
       touch {settings_json}
       touch {fit_contributions_json}
-      "{executable}" -o "{prg}" -y "{key}" -d {device_id} -f "{jungles}" {flags}
+      bash "{executable}" -o "{prg}" -y "{key}" -d {device_id} -f "{jungles}" {flags}
     """.format(
             settings_json = settings_json_file.path,
             fit_contributions_json = fit_contributions_json_file.path,
@@ -1202,7 +1202,7 @@ def _ciq_export_impl(ctx):
         # monkeyc tool.
         command = """
       chmod 644 "{manifest}"
-      "{executable}" -o "{iq}" -y "{key}" -f "{jungles}" -e -r {type_check_level}
+      bash "{executable}" -o "{iq}" -y "{key}" -f "{jungles}" -e -r {type_check_level}
     """.format(
             manifest = manifest_info.manifest_file.path,
             executable = sdk_info.monkeyc_path,
