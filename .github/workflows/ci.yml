@@ -109,6 +109,12 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install libmtp
 
+      - name: Start Docker via Colima (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install docker colima qemu
+          colima start --arch x86_64 --memory 4
+
       - name: Install libmtp (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libmtp-dev
@@ -139,4 +145,26 @@ jobs:
             //samples/screen_ppi:sample_fenix6_debug_build \
             //samples/device_parametrics:sample_edge820_debug_build \
             //samples/device_parametrics:sample_epix_debug_build \
+            //samples/simulator:data_field_fenix6_debug_build \
+            //samples/simulator:interactive_app_fenix6_debug_build \
+            //samples/simulator:interactive_app_venu2_debug_build \
             //samples/store:all
+
+      - name: Run simulator unit tests
+        shell: bash
+        run: |
+          bazel test //simulator:all
+
+      - name: Smoke test containerized simulator
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          KEY_PATH="${GITHUB_WORKSPACE//\\//}/developer_key.der"
+          bazel test \
+            --jobs=1 \
+            --action_env="CIQ_DEVELOPER_KEY_PATH=${KEY_PATH}" \
+            --repo_env=CIQ_AGREEMENT_HASH \
+            --repo_env=GARMIN_USERNAME \
+            --repo_env=GARMIN_PASSWORD \
+            //samples/simulator:data_field_active_log_test \
+            //samples/simulator:data_field_active_screenshot_test
