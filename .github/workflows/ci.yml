@@ -109,13 +109,6 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install libmtp
 
-      - name: Start Docker via Colima (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install docker colima qemu lima-additional-guestagents
-          colima start --arch x86_64 --vm-type=qemu --mount /Users:w --mount /private/var:w --memory 4
-          sudo ln -sf "$HOME/.colima/default/docker.sock" /var/run/docker.sock
-
       - name: Install libmtp (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libmtp-dev
@@ -157,7 +150,7 @@ jobs:
           bazel test //device:all //simulator:all
 
       - name: Smoke test containerized simulator
-        if: runner.os != 'Windows'
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           KEY_PATH="${GITHUB_WORKSPACE//\\//}/developer_key.der"
