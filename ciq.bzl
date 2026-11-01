@@ -71,7 +71,9 @@ SdkInfo = provider(
     fields = [
         "monkeyc_path",
         "shell_path",
-        "simulator_path"
+        "simulator_path",
+        "ensure_linux_sdk_path",
+        "hermetic_ciq_path",
     ],
 )
 
@@ -81,6 +83,8 @@ def _sdk_provider_wrapper_impl(ctx):
             monkeyc_path = ctx.attr.monkeyc_path,
             shell_path = ctx.attr.shell_path,
             simulator_path = ctx.attr.simulator_path,
+            ensure_linux_sdk_path = ctx.attr.ensure_linux_sdk_path,
+            hermetic_ciq_path = ctx.attr.hermetic_ciq_path,
         ),
     ]
 
@@ -90,6 +94,8 @@ sdk_provider_wrapper = rule(
         "monkeyc_path": attr.string(),
         "shell_path": attr.string(),
         "simulator_path": attr.string(),
+        "ensure_linux_sdk_path": attr.string(),
+        "hermetic_ciq_path": attr.string(),
     },
 )
 """
@@ -100,6 +106,8 @@ sdk_provider_wrapper(
     monkeyc_path = "{monkeyc_path}",
     shell_path = "{shell_path}",
     simulator_path = "{simulator_path}",
+    ensure_linux_sdk_path = "{ensure_linux_sdk_path}",
+    hermetic_ciq_path = "{hermetic_ciq_path}",
     visibility = ["//visibility:public"],
 )
 """
@@ -198,6 +206,46 @@ export CFFIXED_USER_HOME="{hermetic_home}"
 export APPDATA="{hermetic_home}/AppData/Roaming"
 """ + _ENSURE_SDK_SNIPPET + """
 exec "{simulator_path}" "$@"
+"""
+
+_ENSURE_LINUX_SDK_NATIVE_TEMPLATE = """#!/bin/bash
+set -euo pipefail
+export PATH="${{PATH:+$PATH:}}/usr/bin:/bin:/usr/sbin:/sbin"
+export MSYS2_ARG_CONV_EXCL="*"
+export HOME="{hermetic_home}"
+export USERPROFILE="{hermetic_home}"
+export CFFIXED_USER_HOME="{hermetic_home}"
+export APPDATA="{hermetic_home}/AppData/Roaming"
+""" + _ENSURE_SDK_SNIPPET + """
+echo "{sdk_dir}"
+"""
+
+_ENSURE_LINUX_SDK_CROSS_TEMPLATE = """#!/bin/bash
+set -euo pipefail
+export PATH="${{PATH:+$PATH:}}/usr/bin:/bin:/usr/sbin:/sbin"
+export MSYS2_ARG_CONV_EXCL="*"
+if [ ! -f "{linux_sdk_dir}/.complete" ]; then
+  lockdir="{hermetic_home}/.linux_sdk_download_{version}.lock"
+  while ! mkdir "$lockdir" 2>/dev/null; do
+    sleep 1
+  done
+  trap 'rmdir "$lockdir" 2>/dev/null || true' EXIT
+  if [ ! -f "{linux_sdk_dir}/.complete" ]; then
+    if [ ! -f "{linux_sdk_dir}/bin/simulator" ]; then
+      rm -rf "{linux_sdk_dir}"
+      mkdir -p "{linux_sdk_dir}"
+      echo "Downloading Linux Connect IQ SDK {version} for container execution..." >&2
+      curl -fsSL "https://developer.garmin.com/downloads/connect-iq/sdks/{linux_archive}" -o "{linux_sdk_dir}.zip"
+      unzip -q "{linux_sdk_dir}.zip" -d "{linux_sdk_dir}"
+      rm -f "{linux_sdk_dir}.zip"
+      chmod +x "{linux_sdk_dir}/bin/simulator" "{linux_sdk_dir}/bin/shell" 2>/dev/null || true
+    fi
+    touch "{linux_sdk_dir}/.complete"
+  fi
+  rmdir "$lockdir" 2>/dev/null || true
+  trap - EXIT
+fi
+echo "{linux_sdk_dir}"
 """
 
 def _connect_iq_sdk_manager_impl(repository_ctx):
@@ -328,9 +376,19 @@ def _sdk_version_from_folder_name(name):
         return None
     return parts[3]
 
-def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_manager_bin, java_bin, os_cfg):
+def _sdk_paths_for_version(
+        repository_ctx,
+        version,
+        sdk_dir,
+        hermetic_home,
+        hermetic_ciq_path,
+        sdk_manager_bin,
+        java_bin,
+        linux_archive,
+        os_cfg):
     sdk_dir = sdk_dir.replace("\\", "/")
     hermetic_home = hermetic_home.replace("\\", "/")
+    hermetic_ciq_path = hermetic_ciq_path.replace("\\", "/")
     sdk_manager_bin = (sdk_manager_bin or "").replace("\\", "/")
     java_bin = (java_bin or "java").replace("\\", "/")
     raw_shell_path = paths.join(sdk_dir, "bin", os_cfg.shell_bin)
@@ -339,6 +397,7 @@ def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_
     monkeyc_rel = "sdk/{}/monkeyc_wrapper.sh".format(version)
     shell_rel = "sdk/{}/shell_wrapper.sh".format(version)
     simulator_rel = "sdk/{}/simulator_wrapper.sh".format(version)
+    ensure_linux_sdk_rel = "sdk/{}/ensure_linux_sdk.sh".format(version)
 
     repository_ctx.file(
         monkeyc_rel,
@@ -373,10 +432,33 @@ def _sdk_paths_for_version(repository_ctx, version, sdk_dir, hermetic_home, sdk_
         ).replace("\r\n", "\n"),
         executable = True,
     )
+    if os_cfg.sdks_json_key == "linux":
+        ensure_linux_sdk_content = _ENSURE_LINUX_SDK_NATIVE_TEMPLATE.format(
+            hermetic_home = hermetic_home,
+            sdk_dir = sdk_dir,
+            sdk_manager_bin = sdk_manager_bin,
+            version = version,
+        )
+    else:
+        linux_folder_name = linux_archive.removesuffix(".zip") if linux_archive else "connectiq-sdk-lin-{}".format(version)
+        linux_sdk_dir = paths.join(hermetic_ciq_path, "LinuxSdks", linux_folder_name).replace("\\", "/")
+        ensure_linux_sdk_content = _ENSURE_LINUX_SDK_CROSS_TEMPLATE.format(
+            hermetic_home = hermetic_home,
+            linux_sdk_dir = linux_sdk_dir,
+            linux_archive = linux_archive,
+            version = version,
+        )
+    repository_ctx.file(
+        ensure_linux_sdk_rel,
+        ensure_linux_sdk_content.replace("\r\n", "\n"),
+        executable = True,
+    )
     return struct(
         monkeyc_path = str(repository_ctx.path(monkeyc_rel)).replace("\\", "/"),
         shell_path = str(repository_ctx.path(shell_rel)).replace("\\", "/"),
         simulator_path = str(repository_ctx.path(simulator_rel)).replace("\\", "/"),
+        ensure_linux_sdk_path = str(repository_ctx.path(ensure_linux_sdk_rel)).replace("\\", "/"),
+        hermetic_ciq_path = hermetic_ciq_path,
     )
 
 def _populate_ciq_repo(
@@ -388,11 +470,15 @@ def _populate_ciq_repo(
         os_cfg):
     sdks_dir_path = paths.join(hermetic_ciq_path, "Sdks")
     sdk_dirs_by_version = {}
+    linux_archives_by_version = {}
 
     if sdks_manifest:
         for entry in sdks_manifest:
             version = entry.get("version")
             archive = entry.get(os_cfg.sdks_json_key, "")
+            linux_archive = entry.get("linux", "")
+            if version and linux_archive:
+                linux_archives_by_version[version] = linux_archive
             if version and archive:
                 folder_name = archive.removesuffix(".dmg").removesuffix(".zip")
                 sdk_dirs_by_version[version] = paths.join(sdks_dir_path, folder_name)
@@ -419,8 +505,10 @@ def _populate_ciq_repo(
             version,
             sdk_dirs_by_version[version],
             hermetic_home,
+            hermetic_ciq_path,
             sdk_manager_bin,
             java_bin,
+            linux_archives_by_version.get(version, ""),
             os_cfg,
         )
         wrapper_blocks.append(
@@ -429,6 +517,8 @@ def _populate_ciq_repo(
                 monkeyc_path = sdk_paths.monkeyc_path,
                 shell_path = sdk_paths.shell_path,
                 simulator_path = sdk_paths.simulator_path,
+                ensure_linux_sdk_path = sdk_paths.ensure_linux_sdk_path,
+                hermetic_ciq_path = sdk_paths.hermetic_ciq_path,
             ),
         )
 
