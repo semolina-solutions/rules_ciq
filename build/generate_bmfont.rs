@@ -108,6 +108,89 @@ struct RenderedGlyph {
     data: Vec<u8>,
 }
 
+/// Trims transparent border pixels (after applying the `anti_alias` threshold)
+/// from a rasterized glyph image and adjusts `left` and `top` bearings accordingly.
+///
+/// `swash` rasterizes outlines via `zeno::Mask::placement()`, which unconditionally
+/// pads the horizontal bounding box by 1px on the left (`left = bounds.min.x - 1`)
+/// and 1px on the right (`width = bounds.width() + 2`). Stripping zero-alpha border
+/// columns/rows removes that artificial padding and collapses empty glyphs (such as
+/// `' '`) to `0x0` with `left = 0, top = 0`.
+fn trim_glyph_image(
+    c: char,
+    image: swash::scale::image::Image,
+    advance: f32,
+    anti_alias: bool,
+) -> RenderedGlyph {
+    let w = image.placement.width;
+    let h = image.placement.height;
+    let mut min_x = w;
+    let mut max_x = 0;
+    let mut min_y = h;
+    let mut max_y = 0;
+    let mut has_visible_pixels = false;
+
+    for y in 0..h {
+        for x in 0..w {
+            let v = image.data[(y * w + x) as usize];
+            let alpha = if anti_alias {
+                v
+            } else if v > 127 {
+                255
+            } else {
+                0
+            };
+            if alpha > 0 {
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
+                has_visible_pixels = true;
+            }
+        }
+    }
+
+    if !has_visible_pixels {
+        return RenderedGlyph {
+            c,
+            width: 0,
+            height: 0,
+            left: 0,
+            top: 0,
+            advance,
+            data: Vec::new(),
+        };
+    }
+
+    let trimmed_width = max_x - min_x + 1;
+    let trimmed_height = max_y - min_y + 1;
+    let mut trimmed_data = Vec::with_capacity((trimmed_width * trimmed_height) as usize);
+
+    for y in min_y..=max_y {
+        for x in min_x..=max_x {
+            let v = image.data[(y * w + x) as usize];
+            let alpha = if anti_alias {
+                v
+            } else if v > 127 {
+                255
+            } else {
+                0
+            };
+            trimmed_data.push(alpha);
+        }
+    }
+
+    RenderedGlyph {
+        c,
+        width: trimmed_width,
+        height: trimmed_height,
+        left: image.placement.left + min_x as i32,
+        top: image.placement.top - min_y as i32,
+        advance,
+        data: trimmed_data,
+    }
+}
+
 fn calculate_scale(
     font: &FontRef,
     height: u32,
@@ -278,15 +361,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         if glyph_id != 0 {
             if let Some(image) = render.format(Format::Alpha).render(&mut scaler, glyph_id) {
-                glyphs.push(RenderedGlyph {
-                    c,
-                    width: image.placement.width,
-                    height: image.placement.height,
-                    left: image.placement.left,
-                    top: image.placement.top,
-                    advance,
-                    data: image.data,
-                });
+                glyphs.push(trim_glyph_image(c, image, advance, args.anti_alias));
             } else {
                 glyphs.push(RenderedGlyph {
                     c,
@@ -374,17 +449,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut data_idx = 0;
                 for y in 0..glyph.height {
                     for x in 0..glyph.width {
-                        let v = glyph.data[data_idx];
-                        let alpha = if args.anti_alias {
-                            v
-                        } else {
-                            if v > 127 {
-                                255
-                            } else {
-                                0
-                            }
-                        };
-
+                        let alpha = glyph.data[data_idx];
                         if alpha > 0 {
                             let px = target_x + x;
                             let py = target_y + y;
