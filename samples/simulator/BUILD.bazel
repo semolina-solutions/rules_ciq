@@ -1,0 +1,281 @@
+"""Demonstrates automated simulator control, screenshot capture, and interaction testing via ciq_automation, ciq_log_test, and ciq_screenshot_test.
+
+Includes two sample projects:
+1. A Data Field project (`data_field_project`) showcasing:
+   - Data field layout selection (`1 Field`, `3 Fields A`) and background color (`White`, `Black`)
+   - Custom application settings / properties injection (`.SET` binary serialization)
+   - Deterministic `.fit` activity sensor data playback (`fit_file = "activity.fit"`)
+   - Data field Activity Timer controls (`timer_actions = ["start", "lap"]`)
+   - Field extraction (`ciq_field_screenshot`) and device framing (`ciq_framed_screenshot`)
+   - Log assertions (`ciq_log_test`) and pixel-exact golden screenshot diffing (`ciq_screenshot_test`) on the `.log` and `.png` outputs produced by `ciq_automation`
+
+2. An Interactive Watch App project (`interactive_app_project`) showcasing:
+   - Simulator locale & display settings (`language`, `time_display`, `units_display`)
+   - Physical button presses and long-press holds (`press:down`, `press:enter`, `hold:menu`)
+   - Touchscreen gestures (`swipe:left`, `tap:50%,50%`)
+   - Log assertions (`ciq_log_test`) and pixel-exact golden screenshot diffing (`ciq_screenshot_test`) on the `.log` and `.png` outputs produced by `ciq_automation`
+"""
+
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_automation",
+    "ciq_device_build",
+    "ciq_field_screenshot",
+    "ciq_framed_screenshot",
+    "ciq_jungle",
+    "ciq_localized_strings_jungle",
+    "ciq_log_test",
+    "ciq_manifest_metadata",
+    "ciq_project",
+    "ciq_screenshot_test",
+)
+load(
+    "//samples:defs.bzl",
+    "LAUNCHER_ICON_DRAWABLE_RESOURCE_ID",
+    "NAME_STRING_RESOURCE_ID",
+    "SDK",
+)
+
+# ==============================================================================
+# 1. Data Field Sample (Layouts, Settings, Activity Simulation, Timer Controls)
+# ==============================================================================
+
+ciq_jungle(
+    name = "data_field_files",
+    resources = ["data_field_properties.xml"],
+    sources = ["data_field.mc"],
+)
+
+DATA_FIELD_MANIFEST = ciq_manifest_metadata(
+    entry = "SimulatorDataFieldApp",
+    id = "c1a00001-0000-4000-8000-000000000001",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
+    min_api_level = "2.4.0",
+    name_string_resource_id = NAME_STRING_RESOURCE_ID,
+    type = "data_field",
+)
+
+ciq_project(
+    name = "data_field_project",
+    jungles = [
+        "//samples:common_files",
+        "//samples:icon",
+        ":data_field_files",
+    ],
+    manifest = DATA_FIELD_MANIFEST,
+    sdk = SDK,
+)
+
+ciq_device_build(
+    name = "data_field_fenix6_debug_build",
+    device_id = "fenix6",
+    project = ":data_field_project",
+)
+
+# Default 1-field white background automation run with default properties.
+# Generates :data_field_default.png and :data_field_default.log.
+ciq_automation(
+    name = "data_field_default",
+    background_color = "White",
+    device_build = ":data_field_fenix6_debug_build",
+    layout = "1 Field",
+    wait_for_log = "data_field compute:",
+)
+
+# 3-field dark background automation run with custom settings overrides,
+# deterministic .fit activity data playback, and started timer + lap action.
+# Generates :data_field_active_3fields_dark.png and :data_field_active_3fields_dark.log.
+ciq_automation(
+    name = "data_field_active_3fields_dark",
+    background_color = "Black",
+    device_build = ":data_field_fenix6_debug_build",
+    fit_file = "activity.fit",
+    layout = "3 Fields A",
+    settings = {
+        "targetHr": "int:165",
+        "title": "string:ZONE 4",
+    },
+    timer_actions = [
+        "start",
+        "lap",
+    ],
+    wait_for_log = "data_field compute:",
+)
+
+# Extracts the top field (index 0) from the 3-field screenshot.
+ciq_field_screenshot(
+    name = "data_field_top_field_extracted",
+    device_id = "fenix6",
+    field_index = 0,
+    layout = "3 Fields A",
+    screenshot = ":data_field_active_3fields_dark.png",
+)
+
+# Superimposes the 3-field dark screenshot into the fenix6 device frame.
+ciq_framed_screenshot(
+    name = "data_field_framed",
+    device_id = "fenix6",
+    screenshots = [":data_field_active_3fields_dark.png"],
+)
+
+# Verifies custom .SET properties, deterministic heart rate sensor data (155 bpm),
+# and activity timer start + lap transitions in the generated .log file.
+ciq_log_test(
+    name = "data_field_active_log_test",
+    expect_logs = [
+        "title=ZONE 4 targetHr=165",
+        "state=RUNNING laps=1",
+        "hr=155",
+    ],
+    forbid_logs = [
+        "state=PAUSED",
+    ],
+    log = ":data_field_active_3fields_dark.log",
+)
+
+# Verifies the 3-field dark screenshot against the golden reference image
+# with strict 0-pixel tolerance.
+ciq_screenshot_test(
+    name = "data_field_active_screenshot_test",
+    expected = "golden/data_field_active_3fields_dark.png",
+    screenshot = ":data_field_active_3fields_dark.png",
+)
+
+# ==============================================================================
+# 2. Interactive Watch App Sample (Buttons, Touch Swipes/Taps, Locale & Units)
+# ==============================================================================
+
+ciq_jungle(
+    name = "interactive_app_sources",
+    sources = ["interactive_app.mc"],
+)
+
+ciq_localized_strings_jungle(
+    name = "interactive_app_strings",
+    base = "interactive_strings.xml",
+    translations = {
+        "deu": "interactive_strings-deu.xml",
+        "eng": "interactive_strings.xml",
+    },
+)
+
+INTERACTIVE_APP_MANIFEST = ciq_manifest_metadata(
+    entry = "SimulatorInteractiveApp",
+    id = "c1a00002-0000-4000-8000-000000000002",
+    launcher_icon_drawable_resource_id = LAUNCHER_ICON_DRAWABLE_RESOURCE_ID,
+    min_api_level = "2.4.0",
+    name_string_resource_id = NAME_STRING_RESOURCE_ID,
+    type = "watch_app",
+)
+
+ciq_project(
+    name = "interactive_app_project",
+    jungles = [
+        "//samples:common_files",
+        "//samples:icon",
+        ":interactive_app_sources",
+        ":interactive_app_strings",
+    ],
+    manifest = INTERACTIVE_APP_MANIFEST,
+    sdk = SDK,
+)
+
+ciq_device_build(
+    name = "interactive_app_fenix6_debug_build",
+    device_id = "fenix6",
+    project = ":interactive_app_project",
+)
+
+ciq_device_build(
+    name = "interactive_app_venu2_debug_build",
+    device_id = "venu2",
+    project = ":interactive_app_project",
+)
+
+# Exercises German locale, 24-hour clock, metric units, and a sequence of
+# physical button presses (`down` -> `enter` -> long-press `menu`) on fenix6.
+# Generates :interactive_app_button_sequence.png and :interactive_app_button_sequence.log.
+ciq_automation(
+    name = "interactive_app_button_sequence",
+    actions = [
+        "press:down",
+        "wait:300",
+        "press:enter",
+        "wait:300",
+        "hold:menu",
+    ],
+    device_build = ":interactive_app_fenix6_debug_build",
+    language = "deu",
+    time_display = "24 Hour",
+    units_display = "Metric",
+    wait_for_log = "interactive_app ready",
+)
+
+ciq_framed_screenshot(
+    name = "interactive_app_button_sequence_framed",
+    device_id = "fenix6",
+    screenshots = [":interactive_app_button_sequence.png"],
+)
+
+ciq_log_test(
+    name = "interactive_app_button_sequence_log_test",
+    expect_logs = [
+        "interactive_app ready: BEREIT [24H/METR]",
+        "interactive_app action=NEXT page=2 select=0 history=NEXT",
+        "interactive_app action=SEL page=2 select=1 history=NEXT>SEL",
+        "interactive_app action=MENU page=2 select=1 history=NEXT>SEL>MENU",
+    ],
+    forbid_logs = [
+        "READY [12H/STAT]",
+        "action=BACK",
+    ],
+    log = ":interactive_app_button_sequence.log",
+)
+
+ciq_screenshot_test(
+    name = "interactive_app_button_sequence_screenshot_test",
+    expected = "golden/interactive_app_button_sequence.png",
+    screenshot = ":interactive_app_button_sequence.png",
+)
+
+# Exercises English locale, 12-hour clock, statute units, and touchscreen
+# swipe + percentage-coordinate tap gestures on venu2.
+# Generates :interactive_app_touch_swipe.png and :interactive_app_touch_swipe.log.
+ciq_automation(
+    name = "interactive_app_touch_swipe",
+    actions = [
+        "swipe:left",
+        "wait:400",
+        "tap:50%,50%",
+    ],
+    device_build = ":interactive_app_venu2_debug_build",
+    language = "eng",
+    time_display = "12 Hour",
+    units_display = "Statute",
+    wait_for_log = "interactive_app ready",
+)
+
+ciq_framed_screenshot(
+    name = "interactive_app_touch_swipe_framed",
+    device_id = "venu2",
+    screenshots = [":interactive_app_touch_swipe.png"],
+)
+
+ciq_log_test(
+    name = "interactive_app_touch_swipe_log_test",
+    expect_logs = [
+        "interactive_app ready: READY [12H/STAT]",
+        "interactive_app action=SWIPE_L page=1 select=0 history=SWIPE_L",
+        "interactive_app action=TAP page=1 select=1 history=SWIPE_L>TAP",
+    ],
+    forbid_logs = [
+        "BEREIT",
+    ],
+    log = ":interactive_app_touch_swipe.log",
+)
+
+ciq_screenshot_test(
+    name = "interactive_app_touch_swipe_screenshot_test",
+    expected = "golden/interactive_app_touch_swipe.png",
+    screenshot = ":interactive_app_touch_swipe.png",
+)
