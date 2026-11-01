@@ -20,17 +20,14 @@ This repository provides [Bazel](https://bazel.build/) rules for building, simul
 *   **App Store Assets**: Generate device-framed screenshots and optimized animated GIFs for the Connect IQ Store.
 *   **Multi-Device Management**: Use macros to generate build, test, and simulation targets for multiple devices at once.
 
-## Limitations
-
-Currenly only macOS is supported.
-
 ## Getting started
 
 1. Before using these rules, ensure you have the following installed:
 
     *  **Bazel**: It's recommended to use [Bazelisk](https://github.com/bazelbuild/bazelisk) to manage your Bazel version. 
-    *  **libmtp**: Required for physical device communication:
+    *  **libmtp** (macOS & Linux): Required for physical device communication (Windows uses the built-in Windows Portable Devices API):
         *   macOS: Install via Homebrew: `brew install libmtp`
+        *   Linux: Install via apt: `sudo apt-get install libmtp-dev`
     * Optional:
         * **[Docker](https://www.docker.com/)**: Required for headless simulator automation (`ciq_automation`, `ciq_log_test`, `ciq_screenshot_test`)
         * **[Bazel watcher](https://github.com/bazelbuild/bazel-watcher)** aka **ibazel**

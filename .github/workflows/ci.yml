@@ -150,10 +150,10 @@ jobs:
             //samples/simulator:interactive_app_venu2_debug_build \
             //samples/store:all
 
-      - name: Run simulator unit tests
+      - name: Run unit tests
         shell: bash
         run: |
-          bazel test //simulator:all
+          bazel test //device:all //simulator:all
 
       - name: Smoke test containerized simulator
         if: runner.os != 'Windows'
