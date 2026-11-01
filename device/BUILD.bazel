@@ -3,6 +3,7 @@ Defines targets for interacting with physical Garmin devices.
 """
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 load(
     "//device:defs.bzl",
@@ -21,18 +22,33 @@ bzl_library(
     ],
 )
 
+_UNIX_ONLY = select({
+    "@platforms//os:linux": [],
+    "@platforms//os:osx": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
+cc_library(
+    name = "linux_libmtp",
+    linkopts = ["-lmtp"],
+    target_compatible_with = _UNIX_ONLY,
+)
+
 alias(
     name = "libmtp",
     actual = select({
+        "@platforms//os:linux": ":linux_libmtp",
         "@platforms//os:osx": "@osx_homebrew//:libmtp",
         "//conditions:default": "//:libmtp_unsupported",
     }),
+    target_compatible_with = _UNIX_ONLY,
     visibility = ["//visibility:public"],
 )
 
 rust_library(
     name = "lib",
     srcs = ["lib.rs"],
+    target_compatible_with = _UNIX_ONLY,
     deps = [
         ":libmtp",
         "@crates//:clap",
@@ -43,6 +59,7 @@ rust_library(
 rust_binary(
     name = "upload",
     srcs = ["upload.rs"],
+    target_compatible_with = _UNIX_ONLY,
     visibility = ["//visibility:public"],
     deps = [
         ":lib",
@@ -52,6 +69,7 @@ rust_binary(
 rust_binary(
     name = "download",
     srcs = ["download.rs"],
+    target_compatible_with = _UNIX_ONLY,
     visibility = ["//visibility:public"],
     deps = [
         ":lib",
@@ -71,4 +89,5 @@ rust_binary(
 
 ciq_view_system_log(
     name = "view_system_log",
+    target_compatible_with = _UNIX_ONLY,
 )
