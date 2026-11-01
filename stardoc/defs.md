@@ -133,6 +133,25 @@ Generates a jungle file mapping sources and resources for specific devices.
 | <a id="ciq_jungle-sources"></a>sources |  List of source files (.mc) to include in the jungle file.  | LABEL_LIST | false |  []  |
 
 
+<a id="ciq_log_test"></a>
+
+
+<pre>
+ciq_log_test(<a href="#ciq_log_test-name">name</a>, <a href="#ciq_log_test-expect_logs">expect_logs</a>, <a href="#ciq_log_test-forbid_logs">forbid_logs</a>, <a href="#ciq_log_test-log">log</a>)
+</pre>
+
+Verifies that an application log file (from ciq_automation) matches expected and forbidden substring/regex patterns.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_log_test-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_log_test-expect_logs"></a>expect_logs |  List of substrings or regex patterns that must appear in the log file.  | STRING_LIST | false |  []  |
+| <a id="ciq_log_test-forbid_logs"></a>forbid_logs |  List of substrings or regex patterns that must not appear in the log file.  | STRING_LIST | false |  []  |
+| <a id="ciq_log_test-log"></a>log |  The .log file (e.g., ':my_automation.log') or ciq_automation target to assert against.  | LABEL | true |    |
+
+
 <a id="ciq_scaled_bmfont_jungle"></a>
 
 
@@ -181,6 +200,26 @@ Generates a jungle file for a scaled drawable resource.
 | <a id="ciq_scaled_drawable_jungle-device_ids"></a>device_ids |  List of device IDs to generate scaled resources for.  | STRING_LIST | false |  *All devices*  |
 | <a id="ciq_scaled_drawable_jungle-percent"></a>percent |  Percentage of the base size to scale to (100 = original size).  | INT | false |  100  |
 | <a id="ciq_scaled_drawable_jungle-resource_id"></a>resource_id |  Resource ID to use in the generated drawables.xml file.  | STRING | true |    |
+
+
+<a id="ciq_screenshot_test"></a>
+
+
+<pre>
+ciq_screenshot_test(<a href="#ciq_screenshot_test-name">name</a>, <a href="#ciq_screenshot_test-expected">expected</a>, <a href="#ciq_screenshot_test-max_diff_pixels">max_diff_pixels</a>, <a href="#ciq_screenshot_test-pixel_tolerance">pixel_tolerance</a>, <a href="#ciq_screenshot_test-screenshot">screenshot</a>)
+</pre>
+
+Compares a captured screenshot PNG (from ciq_automation, ciq_field_screenshot, or ciq_framed_screenshot) against a golden reference image.
+
+**ATTRIBUTES**
+
+| Name | Description | Type | Mandatory | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| <a id="ciq_screenshot_test-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_screenshot_test-expected"></a>expected |  The golden reference .png image to compare against.  | LABEL | true |    |
+| <a id="ciq_screenshot_test-max_diff_pixels"></a>max_diff_pixels |  Maximum number of pixels allowed to exceed pixel_tolerance.  | INT | false |  0  |
+| <a id="ciq_screenshot_test-pixel_tolerance"></a>pixel_tolerance |  Maximum per-channel (R, G, B, A) absolute difference (0-255) treated as matching for a given pixel.  | INT | false |  0  |
+| <a id="ciq_screenshot_test-screenshot"></a>screenshot |  The screenshot .png file (e.g., ':my_automation.png') or ciq_automation target to compare.  | LABEL | true |    |
 
 
 <a id="ciq_sideload_app"></a>
@@ -268,6 +307,27 @@ Downloads the profiling log (.PRF) from the device and analyzes it using the deb
 | <a id="ciq_view_app_profiling-device_build"></a>device_build |  The ciq_device_build target to retrieve the profiling log for.  | LABEL | true |    |
 
 
+<a id="AutomationInfo"></a>
+
+## AutomationInfo
+
+<pre>
+load("@rules_ciq//:defs.bzl", "AutomationInfo")
+
+AutomationInfo(<a href="#AutomationInfo-screenshot_file">screenshot_file</a>, <a href="#AutomationInfo-log_file">log_file</a>, <a href="#AutomationInfo-device_id">device_id</a>)
+</pre>
+
+Provider for Garmin Connect IQ simulator automation outputs.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="AutomationInfo-screenshot_file"></a>screenshot_file |  The captured simulator display screenshot (.png).    |
+| <a id="AutomationInfo-log_file"></a>log_file |  The captured application stdout log (.log).    |
+| <a id="AutomationInfo-device_id"></a>device_id |  The device ID simulated (e.g., 'fenix6').    |
+
+
 <a id="DeviceBuildInfo"></a>
 
 ## DeviceBuildInfo
@@ -345,6 +405,33 @@ Provider for Garmin Connect IQ manifest file.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="ManifestInfo-manifest_file"></a>manifest_file |  The manifest.xml file that defines the application metadata and supported devices.    |
+
+
+<a id="ciq_automation"></a>
+
+
+<pre>
+ciq_automation(<a href="#ciq_automation-name">name</a>, <a href="#ciq_automation-screenshot_out">screenshot_out</a>, <a href="#ciq_automation-log_out">log_out</a>, <a href="#ciq_automation-kwargs">kwargs</a>)
+</pre>
+
+Runs a ciq_device_build target in a containerized Connect IQ Simulator and produces two outputs: `<name>.png` and `<name>.log`.
+
+Downstream rules can reference the predeclared output files directly via `:<name>.png` and `:<name>.log`,
+or pass `:<name>` to rules that accept `AutomationInfo`.
+
+
+**PARAMETERS**
+
+| Name | Description | Default Value |
+| :--- | :--- | :--- |
+| <a id="ciq_automation-name"></a>name |  The target name.  |    |
+| <a id="ciq_automation-screenshot_out"></a>screenshot_out |  Optional custom filename for the generated screenshot PNG (defaults to `<name>.png`).  |  None  |
+| <a id="ciq_automation-log_out"></a>log_out |  Optional custom filename for the generated application log (defaults to `<name>.log`).  |  None  |
+| <a id="ciq_automation-kwargs"></a>kwargs |  Arguments forwarded to the underlying automation rule (`device_build`, `layout`, `background_color`, `settings`, `actions`, `timer_actions`, `simulate_activity`, `fit_file`, `language`, `time_display`, `units_display`, `wait_for_log`, `delay_ms`, `timeout_secs`, etc.).  |    |
+
+**RETURNS**
+
+
 
 
 <a id="ciq_localized_strings_jungle"></a>

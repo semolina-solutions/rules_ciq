@@ -11,6 +11,7 @@ This repository provides [Bazel](https://bazel.build/) rules for building, simul
 *   **Font Generation**: Automatically generate and scale bitmap fonts from TrueType/OpenType files, ensuring they match specific screen dimensions or native SDK font sizes.
 *   **Device Builds**: Build `.prg` application files for specific devices with type checking and optimization options.
 *   **Simulation**: Launch your application in the Connect IQ Simulator directly from the command line (optionally with hot-reload).
+*   **Headless Simulator Automation**: Run applications in a containerized Connect IQ Simulator (`ciq_automation`) to script button presses, touchscreen gestures, `.SET` settings overrides, and `.fit` activity playback, and verify behavior via log assertions (`ciq_log_test`) and golden screenshot comparisons (`ciq_screenshot_test`).
 *   **Testing**: Run unit tests in the simulator (optionally with hot-reload).
 *   **Device Deployment**: Upload applications to physical Garmin devices via MTP (Media Transfer Protocol).
 *   **Log Retrieval**: Fetch debug logs from physical devices.
@@ -31,6 +32,7 @@ Currenly only macOS is supported.
     *  **libmtp**: Required for physical device communication:
         *   macOS: Install via Homebrew: `brew install libmtp`
     * Optional:
+        * **[Docker](https://www.docker.com/)**: Required for headless simulator automation (`ciq_automation`, `ciq_log_test`, `ciq_screenshot_test`)
         * **[Bazel watcher](https://github.com/bazelbuild/bazel-watcher)** aka **ibazel**
         * **[Bazel plugin for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=BazelBuild.vscode-bazel)**
 
@@ -135,6 +137,7 @@ All Garmin Connect IQ assets (`Sdks/`, `Devices/`, `Fonts/`, `sdkmanager-config.
 | **[samples/device_parametrics](samples/device_parametrics)** | Illustrates how to generate device-specific resources like icons and backgrounds. |
 | **[samples/custom_font](samples/custom_font)** | Examples of generating custom bitmap fonts, including scaling relative to screen size or matching native SDK font heights. |
 | **[samples/screen_ppi](samples/screen_ppi)** | Demonstrates how to scale resources based on physical screen dimensions. |
+| **[samples/simulator](samples/simulator)** | Demonstrates headless simulator automation (`ciq_automation`), custom `.SET` settings, `.fit` playback, button/touch gestures, log assertions (`ciq_log_test`), and golden screenshot diffing (`ciq_screenshot_test`). |
 | **[samples/store](samples/store)** | Examples of generating store assets, including device-framed screenshots and animated GIFs. |
 
 ## Documentation
