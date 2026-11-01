@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  vulnerability-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate CycloneDX SBOM from MODULE.bazel.lock
+        run: |
+          python3 - <<'EOF'
+          import json, re
+
+          with open("MODULE.bazel.lock") as f:
+              lock = json.load(f)
+
+          components = []
+          seen = set()
+
+          crate_specs = (
+              lock.get("moduleExtensions", {})
+              .get("@@rules_rust+//crate_universe:extensions.bzl%crate", {})
+              .get("general", {})
+              .get("generatedRepoSpecs", {})
+          )
+          for spec in crate_specs.values():
+              for url in spec.get("attributes", {}).get("urls", []):
+                  m = re.match(r"https://static\.crates\.io/crates/([^/]+)/([^/]+)/download", url)
+                  if m:
+                      name, version = m.group(1), m.group(2)
+                      purl = f"pkg:cargo/{name}@{version}"
+                      if purl not in seen:
+                          seen.add(purl)
+                          components.append({
+                              "type": "library",
+                              "name": name,
+                              "version": version,
+                              "purl": purl,
+                          })
+
+          sbom = {
+              "bomFormat": "CycloneDX",
+              "specVersion": "1.5",
+              "version": 1,
+              "components": components,
+          }
+          with open("sbom.cdx.json", "w") as out:
+              json.dump(sbom, out, indent=2)
+          print(f"Wrote {len(components)} components to sbom.cdx.json")
+          EOF
+
+      - name: Checkout pinned connect-iq-sdk-manager-cli
+        run: |
+          python3 - <<'EOF'
+          import re, subprocess
+
+          with open("MODULE.bazel") as f:
+              mod = f.read()
+
+          block = re.search(r'connect_iq_sdk_manager\((.*?)\)', mod, re.S).group(1)
+          remote = re.search(r'remote\s*=\s*"([^"]+)"', block).group(1)
+          commit = re.search(r'commit\s*=\s*"([^"]+)"', block).group(1)
+
+          subprocess.run(["git", "clone", remote, "/tmp/connect-iq-sdk-manager-cli"], check=True)
+          subprocess.run(["git", "-C", "/tmp/connect-iq-sdk-manager-cli", "checkout", commit], check=True)
+          EOF
+
+      - name: Run OSV-Scanner
+        run: |
+          cat <<'EOF' > .osv-scanner.toml
+          [[IgnoredVulns]]
+          id = "RUSTSEC-2024-0436"
+          reason = "Informational unmaintained notice on transitive proc-macro crate paste (via swash -> zeno -> pulp)"
+          EOF
+          curl -sSfL https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner scan \
+            --config=.osv-scanner.toml \
+            --sbom=sbom.cdx.json \
+            --lockfile=go.mod:/tmp/connect-iq-sdk-manager-cli/go.mod
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    env:
+      CIQ_AGREEMENT_HASH: ${{ secrets.CIQ_AGREEMENT_HASH }}
+      GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
+      GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+      MSYS: winsymlinks:nativestrict
+      MSYS2_ARG_CONV_EXCL: "*"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install libmtp (macOS)
+        if: runner.os == 'macOS'
+        run: brew install libmtp
+
+      - name: Install libmtp (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libmtp-dev
+
+      - name: Generate ephemeral CIQ developer key
+        shell: bash
+        run: |
+          openssl genrsa -out developer_key.pem 4096
+          openssl pkcs8 -topk8 -inform PEM -outform DER -in developer_key.pem -out developer_key.der -nocrypt
+
+      - name: Build tools and sample targets
+        shell: bash
+        run: |
+          KEY_PATH="${GITHUB_WORKSPACE//\\//}/developer_key.der"
+          bazel build \
+            --action_env="CIQ_DEVELOPER_KEY_PATH=${KEY_PATH}" \
+            --repo_env=CIQ_AGREEMENT_HASH \
+            --repo_env=GARMIN_USERNAME \
+            --repo_env=GARMIN_PASSWORD \
+            //build:all \
+            //device:all \
+            //simulator:all \
+            //store:all \
+            //samples/hello_world:sample_fenix6_debug_build \
+            //samples/hello_world:sample_fenix6_release_build \
+            //samples/custom_font:sample_fenix6_debug_build \
+            //samples/i18n:sample_fenix6_debug_build \
+            //samples/screen_ppi:sample_fenix6_debug_build \
+            //samples/device_parametrics:sample_edge820_debug_build \
+            //samples/device_parametrics:sample_epix_debug_build \
+            //samples/store:all
