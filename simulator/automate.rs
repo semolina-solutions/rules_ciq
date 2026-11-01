@@ -444,6 +444,87 @@ fn build_merged_set_bytes(prg_path: &Path, setting_args: &[String]) -> Result<Ve
     Ok(serialize_set_bytes(&entries))
 }
 
+fn resolve_docker_bin() -> PathBuf {
+    let exe_name = if cfg!(windows) { "docker.exe" } else { "docker" };
+    let mut search_dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+    if !cfg!(windows) {
+        search_dirs.push(PathBuf::from("/opt/homebrew/bin"));
+        search_dirs.push(PathBuf::from("/usr/local/bin"));
+        search_dirs.push(PathBuf::from("/usr/bin"));
+    }
+    for dir in search_dirs {
+        let candidate = dir.join(exe_name);
+        if candidate.is_file() {
+            return candidate;
+        }
+    }
+    PathBuf::from(exe_name)
+}
+
+fn augmented_path_env() -> String {
+    let current = std::env::var("PATH").unwrap_or_default();
+    if cfg!(windows) {
+        current
+    } else if current.is_empty() {
+        "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin".to_string()
+    } else {
+        format!("{}:/opt/homebrew/bin:/usr/local/bin", current)
+    }
+}
+
+fn detect_docker_host_sock() -> Option<String> {
+    if std::env::var_os("DOCKER_HOST").is_some() || Path::new("/var/run/docker.sock").exists() {
+        return None;
+    }
+    let mut homes: Vec<PathBuf> = Vec::new();
+    if let Some(h) = std::env::var_os("HOME") {
+        homes.push(PathBuf::from(h));
+    }
+    if let Ok(entries) = fs::read_dir("/Users") {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() && !homes.contains(&p) {
+                homes.push(p);
+            }
+        }
+    }
+    let rel_candidates = [
+        ".colima/default/docker.sock",
+        ".docker/run/docker.sock",
+        ".orbstack/run/docker.sock",
+        ".rd/docker.sock",
+    ];
+    for home in homes {
+        for rel in rel_candidates {
+            let sock = home.join(rel);
+            if sock.exists() {
+                return Some(format!("unix://{}", sock.display()));
+            }
+        }
+    }
+    None
+}
+
+fn docker_std_command() -> std::process::Command {
+    let mut cmd = std::process::Command::new(resolve_docker_bin());
+    cmd.env("PATH", augmented_path_env());
+    if let Some(host) = detect_docker_host_sock() {
+        cmd.env("DOCKER_HOST", host);
+    }
+    cmd
+}
+
+fn docker_tokio_command() -> Command {
+    let mut cmd = Command::new(resolve_docker_bin());
+    cmd.env("PATH", augmented_path_env());
+    if let Some(host) = detect_docker_host_sock() {
+        cmd.env("DOCKER_HOST", host);
+    }
+    cmd
+}
+
 fn wait_and_sync_custom_set_files_in_container(container_name: &str) {
     let script = r#"
         for _ in $(seq 1 30); do
@@ -463,7 +544,7 @@ fn wait_and_sync_custom_set_files_in_container(container_name: &str) {
             sleep 0.1
         done
     "#;
-    let _ = std::process::Command::new("docker")
+    let _ = docker_std_command()
         .args(["exec", container_name, "bash", "-c", script])
         .status();
 }
@@ -794,7 +875,7 @@ fn ensure_docker_image(dockerfile: &Path, hook_src: &Path, lock_parent: &Path) -
     let hash = fnv1a_hash(&[&df_bytes, &hook_bytes]);
     let image_tag = format!("rules-ciq-simulator:{:016x}", hash);
 
-    let inspect_ok = std::process::Command::new("docker")
+    let inspect_ok = docker_std_command()
         .args(["image", "inspect", &image_tag])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -817,7 +898,7 @@ fn ensure_docker_image(dockerfile: &Path, hook_src: &Path, lock_parent: &Path) -
     }
     let _guard = LockGuard(lock_dir);
 
-    let inspect_ok = std::process::Command::new("docker")
+    let inspect_ok = docker_std_command()
         .args(["image", "inspect", &image_tag])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -835,7 +916,7 @@ fn ensure_docker_image(dockerfile: &Path, hook_src: &Path, lock_parent: &Path) -
     fs::copy(hook_src, ctx_dir.join("gtk_automation_hook.rs"))?;
 
     let ctx_dir_str = ctx_dir.to_string_lossy().replace('\\', "/");
-    let status = std::process::Command::new("docker")
+    let status = docker_std_command()
         .args([
             "build",
             "--platform",
@@ -882,7 +963,7 @@ struct ContainerGuard {
 
 impl Drop for ContainerGuard {
     fn drop(&mut self) {
-        let _ = std::process::Command::new("docker")
+        let _ = docker_std_command()
             .args(["rm", "-f", &self.container_name])
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -1056,7 +1137,7 @@ async fn run_automation(args: AutomateArgs) -> Result<()> {
     );
     let work_mount = format!("{}:/work", work_dir.to_string_lossy().replace('\\', "/"));
 
-    let child = std::process::Command::new("docker")
+    let child = docker_std_command()
         .args([
             "run",
             "--rm",
@@ -1091,7 +1172,7 @@ async fn run_automation(args: AutomateArgs) -> Result<()> {
     let overall_timeout = Duration::from_secs(args.timeout_secs);
     timeout(overall_timeout, async {
         let mut shell = loop {
-            let mut cmd = Command::new("docker");
+            let mut cmd = docker_tokio_command();
             cmd.args(["exec", "-i", &unique_id, "/ciq/sdk/bin/shell"])
                 .stderr(Stdio::null());
             if let Ok(mut s) = Shell::from_command(cmd).await {

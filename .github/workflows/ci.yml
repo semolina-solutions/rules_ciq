@@ -114,6 +114,7 @@ jobs:
         run: |
           brew install docker colima qemu lima-additional-guestagents
           colima start --arch x86_64 --vm-type=qemu --mount /Users:w --mount /private/var:w --memory 4
+          sudo ln -sf "$HOME/.colima/default/docker.sock" /var/run/docker.sock
 
       - name: Install libmtp (Linux)
         if: runner.os == 'Linux'
