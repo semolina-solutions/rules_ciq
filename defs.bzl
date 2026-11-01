@@ -33,6 +33,10 @@ load(
 )
 load(
     "//simulator:defs.bzl",
+    _AutomationInfo = "AutomationInfo",
+    _ciq_automation = "ciq_automation",
+    _ciq_log_test = "ciq_log_test",
+    _ciq_screenshot_test = "ciq_screenshot_test",
     _ciq_simulation = "ciq_simulation",
     _ciq_test = "ciq_test",
 )
@@ -70,6 +74,10 @@ ciq_view_app_log = _ciq_view_app_log
 ciq_view_app_profiling = _ciq_view_app_profiling
 
 # simulator/defs.bzl
+AutomationInfo = _AutomationInfo
+ciq_automation = _ciq_automation
+ciq_log_test = _ciq_log_test
+ciq_screenshot_test = _ciq_screenshot_test
 ciq_simulation = _ciq_simulation
 ciq_test = _ciq_test
 

@@ -1,13 +1,17 @@
 """
-Defines targets for running applications in the Connect IQ Simulator.
+Defines targets for running and automating applications in the Connect IQ Simulator.
 """
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["defs.bzl"])
+exports_files([
+    "Dockerfile",
+    "defs.bzl",
+    "gtk_automation_hook.rs",
+])
 
 bzl_library(
     name = "defs",
@@ -40,4 +44,62 @@ rust_binary(
     name = "test",
     srcs = ["test.rs"],
     deps = [":lib"],
+)
+
+rust_binary(
+    name = "automate",
+    srcs = ["automate.rs"],
+    deps = [
+        ":lib",
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:regex",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
+rust_binary(
+    name = "verify_log",
+    srcs = ["verify_log.rs"],
+    deps = [
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:regex",
+    ],
+)
+
+rust_binary(
+    name = "verify_screenshot",
+    srcs = ["verify_screenshot.rs"],
+    deps = [
+        "@crates//:anyhow",
+        "@crates//:clap",
+        "@crates//:image",
+    ],
+)
+
+rust_test(
+    name = "gtk_automation_hook_test",
+    size = "small",
+    srcs = ["gtk_automation_hook.rs"],
+)
+
+rust_test(
+    name = "automate_test",
+    size = "small",
+    crate = ":automate",
+)
+
+rust_test(
+    name = "verify_log_test",
+    size = "small",
+    crate = ":verify_log",
+)
+
+rust_test(
+    name = "verify_screenshot_test",
+    size = "small",
+    crate = ":verify_screenshot",
 )

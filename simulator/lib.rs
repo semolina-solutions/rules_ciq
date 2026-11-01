@@ -30,7 +30,11 @@ pub struct Shell {
 
 impl Shell {
     pub async fn new(shell_path: &Path) -> Result<Self> {
-        let mut process = Command::new(shell_path)
+        Self::from_command(Command::new(shell_path)).await
+    }
+
+    pub async fn from_command(mut cmd: Command) -> Result<Self> {
+        let mut process = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()
@@ -312,7 +316,7 @@ pub async fn test(mut shell: Shell, args: Args) -> Result<()> {
 }
 
 #[derive(Clone, Copy)]
-enum LogLine<'a> {
+pub enum LogLine<'a> {
     Simulator(&'a str),
     Device(&'a str),
     App(&'a str),
@@ -320,7 +324,7 @@ enum LogLine<'a> {
     Raw(&'a str),
 }
 
-async fn stream_logs<F>(shell: Shell, formatted_app_id: &str, mut callback: F) -> Result<()> 
+pub async fn stream_logs<F>(shell: Shell, formatted_app_id: &str, mut callback: F) -> Result<()> 
 where F: FnMut(LogLine) -> bool
 {
     let mut lines = shell.stdout_reader.lines();
