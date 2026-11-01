@@ -830,6 +830,7 @@ fn ensure_docker_image(dockerfile: &Path, hook_src: &Path, lock_parent: &Path) -
 
     let ctx_dir = std::env::temp_dir().join(format!("ciq_docker_ctx_{}_{:016x}", std::process::id(), hash));
     fs::create_dir_all(&ctx_dir)?;
+    let ctx_dir = fs::canonicalize(&ctx_dir).unwrap_or(ctx_dir);
     fs::copy(dockerfile, ctx_dir.join("Dockerfile"))?;
     fs::copy(hook_src, ctx_dir.join("gtk_automation_hook.rs"))?;
 
@@ -942,6 +943,7 @@ async fn run_automation(args: AutomateArgs) -> Result<()> {
     let unique_id = format!("ciq-auto-{}-{}", std::process::id(), now_nanos);
     let work_dir = std::env::temp_dir().join(&unique_id);
     fs::create_dir_all(&work_dir)?;
+    let work_dir = fs::canonicalize(&work_dir).unwrap_or(work_dir);
 
     let prg_name = args
         .prg
@@ -1021,8 +1023,11 @@ async fn run_automation(args: AutomateArgs) -> Result<()> {
     let hook_cmds = generate_hook_commands(&args, &sim_json)?;
     fs::write(work_dir.join("hook_cmds.txt"), hook_cmds)?;
 
-    let devices_dir = args.hermetic_ciq_dir.join("Devices");
-    let fonts_dir = args.hermetic_ciq_dir.join("Fonts");
+    let linux_sdk_dir = fs::canonicalize(&linux_sdk_dir).unwrap_or(linux_sdk_dir);
+    let devices_dir = fs::canonicalize(args.hermetic_ciq_dir.join("Devices"))
+        .unwrap_or_else(|_| args.hermetic_ciq_dir.join("Devices"));
+    let fonts_dir = fs::canonicalize(args.hermetic_ciq_dir.join("Fonts"))
+        .unwrap_or_else(|_| args.hermetic_ciq_dir.join("Fonts"));
 
     let container_script = r#"
         set -e

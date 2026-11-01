@@ -112,8 +112,8 @@ jobs:
       - name: Start Docker via Colima (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install docker colima qemu
-          colima start --arch x86_64 --memory 4
+          brew install docker colima qemu lima-additional-guestagents
+          colima start --arch x86_64 --vm-type=qemu --mount /Users:w --mount /private/var:w --memory 4
 
       - name: Install libmtp (Linux)
         if: runner.os == 'Linux'
