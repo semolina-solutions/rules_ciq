@@ -11,7 +11,7 @@ bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
     deps = [
-        "@local_ciq//:defs",
+        "@ciq//:defs",
     ],
 )
 

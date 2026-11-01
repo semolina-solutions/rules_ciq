@@ -5,7 +5,7 @@ This module re-exports rules and providers from the various sub-packages
 (build, device, simulator, store) for convenience.
 """
 
-load("@local_ciq//:defs.bzl", _devices = "devices")
+load("@ciq//:defs.bzl", _devices = "devices")
 load(
     "//build:defs.bzl",
     _DeviceBuildInfo = "DeviceBuildInfo",
@@ -43,7 +43,7 @@ load(
     _ciq_store_image = "ciq_store_image",
 )
 
-# @local_ciq//:defs.bzl
+# @ciq//:defs.bzl
 devices = _devices
 
 # build/defs.bzl

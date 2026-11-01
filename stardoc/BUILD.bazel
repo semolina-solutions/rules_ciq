@@ -5,13 +5,13 @@ bzl_library(
     name = "defs_lib",
     srcs = ["//:defs.bzl"],
     deps = [
-        "@bazel_skylib//lib:paths",
-        "@local_ciq//:defs",
-        "@local_ciq//sdk:defs",
         "//build:defs",
         "//device:defs",
         "//simulator:defs",
         "//store:defs",
+        "@bazel_skylib//lib:paths",
+        "@ciq//:defs",
+        "@ciq//sdk:defs",
     ],
 )
 
@@ -29,7 +29,7 @@ bzl_library(
     srcs = ["//:macros.bzl"],
     deps = [
         ":defs_lib",
-        "@local_ciq//:defs",
+        "@ciq//:defs",
     ],
 )
 

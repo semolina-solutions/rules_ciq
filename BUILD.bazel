@@ -2,3 +2,9 @@ exports_files([
     "defs.bzl",
     "macros.bzl",
 ])
+
+alias(
+    name = "sdk_manager",
+    actual = "@connect_iq_sdk_manager_cli//:sdk_manager",
+    visibility = ["//visibility:public"],
+)

@@ -1,6 +1,6 @@
 """Macros for generating Connect IQ build, simulation, and upload targets for multiple devices."""
 
-load("@local_ciq//:defs.bzl", "devices")
+load("@ciq//:defs.bzl", "devices")
 load(
     "//build:defs.bzl",
     "ciq_device_build",

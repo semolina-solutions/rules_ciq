@@ -14,8 +14,8 @@ bzl_library(
     srcs = ["defs.bzl"],
     deps = [
         "//build:defs",
-        "@local_ciq//sdk:defs",
         "@bazel_skylib//lib:paths",
+        "@ciq//sdk:defs",
     ],
 )
 

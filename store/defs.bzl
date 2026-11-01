@@ -2,7 +2,7 @@
 Rules for generating assets for the Garmin Connect IQ Store.
 """
 
-load("@local_ciq//:defs.bzl", "devices")
+load("@ciq//:defs.bzl", "devices")
 
 def _ciq_framed_screenshot_impl(ctx):
     device_id = ctx.attr.device_id
@@ -84,7 +84,7 @@ ciq_framed_screenshot = rule(
             default = Label("//store:frame_screenshot"),
         ),
         "_device_files": attr.label(
-            default = Label("@local_ciq//:devices"),
+            default = Label("@ciq//:devices"),
             allow_files = True,
         ),
     },

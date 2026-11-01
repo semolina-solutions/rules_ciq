@@ -107,7 +107,7 @@ product_data_api = repository_rule(
     attrs = {
         "devices_json": attr.label(
             allow_single_file = True,
-            doc = "The devices.json file from local_ciq containing the devices dict.",
+            doc = "The devices.json file from @ciq containing the devices dict.",
         ),
     },
     # This rule downloads content, so it shouldn't be local.

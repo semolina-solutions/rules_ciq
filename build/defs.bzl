@@ -8,8 +8,8 @@ This module defines custom Bazel rules for building Connect IQ projects, includi
 """
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@local_ciq//:defs.bzl", "devices")
-load("@local_ciq//sdk:defs.bzl", "SdkInfo")
+load("@ciq//:defs.bzl", "devices", "sdk_versions")
+load("@ciq//sdk:defs.bzl", "SdkInfo")
 load("//metrics:defs.bzl", "DeviceDependentMetricInfo")
 
 # The environment variable name used to locate the developer key for signing.
@@ -274,7 +274,7 @@ ciq_scaled_drawable_jungle = rule(
             default = devices.keys(),
         ),
         "_fonts": attr.label(
-            default = Label("@local_ciq//:fonts"),
+            default = Label("@ciq//:fonts"),
         ),
         "_scale_image_tool": attr.label(
             executable = True,
@@ -437,7 +437,7 @@ ciq_scaled_bmfont_jungle = rule(
             default = devices.keys(),
         ),
         "_fonts": attr.label(
-            default = Label("@local_ciq//:fonts"),
+            default = Label("@ciq//:fonts"),
         ),
         "_generate_bmfont_tool": attr.label(
             default = Label("//build:generate_bmfont"),
@@ -957,6 +957,7 @@ def _ciq_project_impl(ctx):
         all_jungle_files += info.jungle_files
         outputs += jungle.files.to_list()
     return [
+        ctx.attr.sdk[SdkInfo],
         ManifestInfo(
             manifest_file = ctx.file.manifest,
         ),
@@ -983,11 +984,16 @@ _ciq_project = rule(
             mandatory = True,
             providers = [JunglesInfo],
         ),
+        "sdk": attr.label(
+            doc = "Connect IQ SDK target to use for this project.",
+            mandatory = True,
+            providers = [SdkInfo],
+        ),
     },
 )
 
-def ciq_project(name, jungles, manifest, **kwargs):
-    """Defines a Connect IQ project, linking a manifest file with jungle files and resources.
+def ciq_project(name, jungles, manifest, sdk, **kwargs):
+    """Defines a Connect IQ project, linking a manifest file with jungle files, resources, and a target SDK.
 
     The `manifest` parameter can either be:
     - A manifest file label / target (e.g. `manifest = "manifest.xml"` or `manifest = ":my_manifest"`)
@@ -999,8 +1005,16 @@ def ciq_project(name, jungles, manifest, **kwargs):
         name: Target name for the project.
         jungles: List of jungle asset targets containing sources and resources.
         manifest: Either a manifest file target (e.g. "manifest.xml") or metadata from ciq_manifest_metadata(...).
+        sdk: Connect IQ SDK version string (e.g., `"9.3.0"`).
         **kwargs: Additional arguments forwarded to the project rule.
     """
+    if sdk not in sdk_versions:
+        fail("Unknown Connect IQ SDK version '{}' in target '{}'. Available versions: {}".format(
+            sdk,
+            name,
+            ", ".join(sdk_versions),
+        ))
+
     if hasattr(manifest, "id") or type(manifest) == "dict":
         manifest_meta = dict(
             id = manifest.id,
@@ -1033,6 +1047,7 @@ def ciq_project(name, jungles, manifest, **kwargs):
         name = name,
         manifest = manifest_label,
         jungles = jungles,
+        sdk = Label("@ciq//sdk:" + sdk),
         **kwargs
     )
 
@@ -1068,7 +1083,7 @@ def _get_developer_key_path(ctx):
 
 def _ciq_device_build_impl(ctx):
     key_path = _get_developer_key_path(ctx)
-    sdk_info = ctx.attr.sdk[SdkInfo]
+    sdk_info = ctx.attr.project[SdkInfo]
     manifest_info = ctx.attr.project[ManifestInfo]
     jungles_info = ctx.attr.project[JunglesInfo]
     name = ctx.label.name
@@ -1143,15 +1158,10 @@ ciq_device_build = rule(
     doc = "Builds the application (.prg) for a specific device.",
     attrs = {
         "project": attr.label(
-            doc = "The ciq_project target containing the manifest and jungle assets.",
+            doc = "The ciq_project target containing the manifest, jungle assets, and target SDK.",
             mandatory = True,
-            providers = [ManifestInfo, JunglesInfo],
+            providers = [ManifestInfo, JunglesInfo, SdkInfo],
             allow_files = True,
-        ),
-        "sdk": attr.label(
-            doc = "Connect IQ SDK to use for compilation.",
-            default = Label("@local_ciq//sdk:current"),
-            providers = [SdkInfo],
         ),
         "device_id": attr.string(
             doc = "Target device ID to build for (e.g., 'fenix6').",
@@ -1175,7 +1185,7 @@ ciq_device_build = rule(
 
 def _ciq_export_impl(ctx):
     key_path = _get_developer_key_path(ctx)
-    sdk_info = ctx.attr.sdk[SdkInfo]
+    sdk_info = ctx.attr.project[SdkInfo]
     manifest_info = ctx.attr.project[ManifestInfo]
     jungles_info = ctx.attr.project[JunglesInfo]
     name = ctx.label.name
@@ -1213,15 +1223,10 @@ ciq_export = rule(
     doc = "Exports the application (.iq) for distribution.",
     attrs = {
         "project": attr.label(
-            doc = "The ciq_project target containing the manifest and jungle assets.",
+            doc = "The ciq_project target containing the manifest, jungle assets, and target SDK.",
             mandatory = True,
-            providers = [ManifestInfo, JunglesInfo],
+            providers = [ManifestInfo, JunglesInfo, SdkInfo],
             allow_files = True,
-        ),
-        "sdk": attr.label(
-            doc = "Connect IQ SDK to use for compilation.",
-            default = Label("@local_ciq//sdk:current"),
-            providers = [SdkInfo],
         ),
         "type_check_level": attr.int(
             doc = "Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict). Default is 0.",

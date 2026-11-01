@@ -37,6 +37,7 @@ load(
     "//samples:defs.bzl",
     "LAUNCHER_ICON_DRAWABLE_RESOURCE_ID",
     "NAME_STRING_RESOURCE_ID",
+    "SDK",
 )
 
 # Creates a jungle asset of static source and resource files for inclusion into
@@ -70,6 +71,7 @@ ciq_project(
     name = "project",
     jungles = JUNGLES,
     manifest = MANIFEST,
+    sdk = SDK,
 )
 
 # Use Pythonic list comprehension to make a list of devices that support this

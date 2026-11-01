@@ -2,7 +2,7 @@
 Defines provider and rules for device-dependent metrics.
 """
 
-load("@local_ciq//:defs.bzl", "devices")
+load("@ciq//:defs.bzl", "devices")
 
 DeviceDependentMetricInfo = provider(
     "Provider for device-dependent metrics.",
@@ -126,7 +126,7 @@ sdk_font_metric = rule(
         "sdk_font_name": attr.string(mandatory = True),
         "sdk_font_set": attr.string(default = "ww"),
         "device_ids": attr.string_list(default = devices.keys()),
-        "_fonts": attr.label(default = Label("@local_ciq//:fonts")),
+        "_fonts": attr.label(default = Label("@ciq//:fonts")),
         "_measure_cft_tool": attr.label(
             executable = True,
             cfg = "exec",
@@ -172,7 +172,7 @@ ppi_metric = rule(
         "device_ids": attr.string_list(default = devices.keys()),
         "_devices_json": attr.label(
             allow_single_file = True,
-            default = Label("@local_ciq//:devices.json"),
+            default = Label("@ciq//:devices.json"),
         ),
         "_products": attr.label(
             allow_files = True,

@@ -3,7 +3,7 @@ Rules for running applications in the Connect IQ Simulator.
 """
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("@local_ciq//sdk:defs.bzl", "SdkInfo")
+load("@ciq//sdk:defs.bzl", "SdkInfo")
 load("//build:defs.bzl", "DeviceBuildInfo", "ManifestInfo")
 
 # See https://github.com/bazelbuild/bazel/blob/master/tools/bash/runfiles/runfiles.bash

@@ -28,12 +28,21 @@ Currenly only macOS is supported.
 1. Before using these rules, ensure you have the following installed:
 
     *  **Bazel**: It's recommended to use [Bazelisk](https://github.com/bazelbuild/bazelisk) to manage your Bazel version. 
-    *  **Garmin Connect IQ SDK**: Install an SDK using the Connect IQ SDK Manager.
     *  **libmtp**: Required for physical device communication:
         *   macOS: Install via Homebrew: `brew install libmtp`
     * Optional:
         * **[Bazel watcher](https://github.com/bazelbuild/bazel-watcher)** aka **ibazel**
         * **[Bazel plugin for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=BazelBuild.vscode-bazel)**
+
+1. Authenticate once using the bundled [`connect-iq-sdk-manager-cli`](https://github.com/lindell/connect-iq-sdk-manager-cli) target so `rules_ciq` can hermetically provision the Garmin Connect IQ SDKs, devices, and fonts inside your Bazel output base:
+
+    ```bash
+    bazel run @rules_ciq//:sdk_manager -- agreement view
+    bazel run @rules_ciq//:sdk_manager -- agreement accept
+    bazel run @rules_ciq//:sdk_manager -- login
+    ```
+
+    *(For headless / CI environments, you can instead set `CIQ_AGREEMENT_HASH`, `GARMIN_USERNAME`, and `GARMIN_PASSWORD` in your environment.)*
 
 1. Create a `.bazelrc` file (see [documentation](https://bazel.build/run/bazelrc))
 containing the following reference to your CIQ developer key:
@@ -83,6 +92,7 @@ the `BUILD.bazel` file to generate an app manifest for a widget file:
             name_string_resource_id = "MyAppNameResource",
             type = "widget",
         ),
+        sdk = "9.3.0",
     )
     ```
 1. Build, run or test your Bazel targets using `bazel build`, `bazel run`, or
@@ -96,6 +106,24 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
     The generated file will be written to the `bazel-bin` directory. You can
     observe that all devices that support widgets and a minimum API level
     `3.0.0` are included.
+
+## Managing SDKs, Devices, and Fonts
+
+All Garmin Connect IQ assets (`Sdks/`, `Devices/`, `Fonts/`, `sdkmanager-config.ini`, and `token.json`) are stored hermetically inside your workspace's Bazel output base under `$(bazel info output_base)/ciq_hermetic_home` (at `Library/Application Support/Garmin/ConnectIQ` on macOS, `.Garmin/ConnectIQ` on Linux, or `AppData/Roaming/Garmin/ConnectIQ` on Windows).
+
+*   **Selecting an SDK version**: Projects specify their target SDK version explicitly via the `sdk` attribute on `ciq_project` (e.g. `sdk = "9.3.0"`). The targeted SDK version is downloaded automatically on first use. To list available SDK versions from Garmin:
+    ```bash
+    bazel run @rules_ciq//:sdk_manager -- sdk list
+    ```
+*   **Incremental refresh (newly released SDKs, devices, and fonts)**: To check Garmin's servers for newly added devices, fonts, and SDK releases without wiping existing downloads:
+    ```bash
+    bazel fetch --configure
+    ```
+*   **Full re-download of devices and fonts**: Because existing device directories and font files are cached on disk, if Garmin updates an existing device definition in place, remove the cached `Devices` and `Fonts` directories (keeping your login token, accepted agreement, and downloaded SDKs intact) and re-fetch:
+    ```bash
+    rm -rf "$(bazel info output_base)/ciq_hermetic_home/Library/Application Support/Garmin/ConnectIQ/"{Devices,Fonts}
+    bazel fetch --configure
+    ```
 
 ## Samples
 

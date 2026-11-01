@@ -20,6 +20,7 @@ load(
     "//samples:defs.bzl",
     "LAUNCHER_ICON_DRAWABLE_RESOURCE_ID",
     "NAME_STRING_RESOURCE_ID",
+    "SDK",
 )
 
 # A custom font sized to 50% of the screen width or height, whichever is smaller.
@@ -74,6 +75,7 @@ ciq_project(
     name = "project",
     jungles = JUNGLES,
     manifest = MANIFEST,
+    sdk = SDK,
 )
 
 DEVICE_IDS_SUPPORTING_WIDGET = [

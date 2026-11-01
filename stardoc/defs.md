@@ -9,7 +9,7 @@ This module re-exports rules and providers from the various sub-packages
 
 
 <pre>
-ciq_device_build(<a href="#ciq_device_build-name">name</a>, <a href="#ciq_device_build-device_id">device_id</a>, <a href="#ciq_device_build-profiling">profiling</a>, <a href="#ciq_device_build-project">project</a>, <a href="#ciq_device_build-release">release</a>, <a href="#ciq_device_build-sdk">sdk</a>, <a href="#ciq_device_build-testing">testing</a>, <a href="#ciq_device_build-type_check_level">type_check_level</a>)
+ciq_device_build(<a href="#ciq_device_build-name">name</a>, <a href="#ciq_device_build-device_id">device_id</a>, <a href="#ciq_device_build-profiling">profiling</a>, <a href="#ciq_device_build-project">project</a>, <a href="#ciq_device_build-release">release</a>, <a href="#ciq_device_build-testing">testing</a>, <a href="#ciq_device_build-type_check_level">type_check_level</a>)
 </pre>
 
 Builds the application (.prg) for a specific device.
@@ -21,9 +21,8 @@ Builds the application (.prg) for a specific device.
 | <a id="ciq_device_build-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_device_build-device_id"></a>device_id |  Target device ID to build for (e.g., 'fenix6').  | STRING | true |    |
 | <a id="ciq_device_build-profiling"></a>profiling |  Enable profiling in the build.  | BOOLEAN | false |  False  |
-| <a id="ciq_device_build-project"></a>project |  The ciq_project target containing the manifest and jungle assets.  | LABEL | true |    |
+| <a id="ciq_device_build-project"></a>project |  The ciq_project target containing the manifest, jungle assets, and target SDK.  | LABEL | true |    |
 | <a id="ciq_device_build-release"></a>release |  Build in release mode (optimized, no debug symbols).  | BOOLEAN | false |  False  |
-| <a id="ciq_device_build-sdk"></a>sdk |  Connect IQ SDK to use for compilation.  | LABEL | false |  "@local_ciq//sdk:current"  |
 | <a id="ciq_device_build-testing"></a>testing |  Include tests in the build.  | BOOLEAN | false |  False  |
 | <a id="ciq_device_build-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict).  | INT | false |  0  |
 
@@ -32,7 +31,7 @@ Builds the application (.prg) for a specific device.
 
 
 <pre>
-ciq_export(<a href="#ciq_export-name">name</a>, <a href="#ciq_export-project">project</a>, <a href="#ciq_export-sdk">sdk</a>, <a href="#ciq_export-type_check_level">type_check_level</a>)
+ciq_export(<a href="#ciq_export-name">name</a>, <a href="#ciq_export-project">project</a>, <a href="#ciq_export-type_check_level">type_check_level</a>)
 </pre>
 
 Exports the application (.iq) for distribution.
@@ -42,8 +41,7 @@ Exports the application (.iq) for distribution.
 | Name | Description | Type | Mandatory | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_export-name"></a>name |  A unique name for this target.  | NAME | true |    |
-| <a id="ciq_export-project"></a>project |  The ciq_project target containing the manifest and jungle assets.  | LABEL | true |    |
-| <a id="ciq_export-sdk"></a>sdk |  Connect IQ SDK to use for compilation.  | LABEL | false |  "@local_ciq//sdk:current"  |
+| <a id="ciq_export-project"></a>project |  The ciq_project target containing the manifest, jungle assets, and target SDK.  | LABEL | true |    |
 | <a id="ciq_export-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict). Default is 0.  | INT | false |  0  |
 
 
@@ -421,10 +419,10 @@ A struct containing the manifest metadata.
 
 
 <pre>
-ciq_project(<a href="#ciq_project-name">name</a>, <a href="#ciq_project-jungles">jungles</a>, <a href="#ciq_project-manifest">manifest</a>, <a href="#ciq_project-kwargs">kwargs</a>)
+ciq_project(<a href="#ciq_project-name">name</a>, <a href="#ciq_project-jungles">jungles</a>, <a href="#ciq_project-manifest">manifest</a>, <a href="#ciq_project-sdk">sdk</a>, <a href="#ciq_project-kwargs">kwargs</a>)
 </pre>
 
-Defines a Connect IQ project, linking a manifest file with jungle files and resources.
+Defines a Connect IQ project, linking a manifest file with jungle files, resources, and a target SDK.
 
 The `manifest` parameter can either be:
 - A manifest file label / target (e.g. `manifest = "manifest.xml"` or `manifest = ":my_manifest"`)
@@ -440,6 +438,7 @@ The `manifest` parameter can either be:
 | <a id="ciq_project-name"></a>name |  Target name for the project.  |    |
 | <a id="ciq_project-jungles"></a>jungles |  List of jungle asset targets containing sources and resources.  |    |
 | <a id="ciq_project-manifest"></a>manifest |  Either a manifest file target (e.g. "manifest.xml") or metadata from ciq_manifest_metadata(...).  |    |
+| <a id="ciq_project-sdk"></a>sdk |  Connect IQ SDK version string (e.g., `"9.3.0"`).  |    |
 | <a id="ciq_project-kwargs"></a>kwargs |  Additional arguments forwarded to the project rule.  |    |
 
 **RETURNS**

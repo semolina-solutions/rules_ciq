@@ -13,8 +13,8 @@ bzl_library(
     deps = [
         "//metrics:defs",
         "@bazel_skylib//lib:paths",
-        "@local_ciq//:defs",
-        "@local_ciq//sdk:defs",
+        "@ciq//:defs",
+        "@ciq//sdk:defs",
     ],
 )
 
