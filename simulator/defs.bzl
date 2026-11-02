@@ -177,6 +177,8 @@ def _ciq_automation_impl(ctx):
         args.add("--units-display", ctx.attr.units_display)
     if ctx.attr.language:
         args.add("--language", ctx.attr.language)
+    if ctx.attr.glance_mode:
+        args.add("--glance-mode")
     if ctx.attr.simulate_activity:
         args.add("--simulate-activity")
     if ctx.file.fit_file:
@@ -266,6 +268,10 @@ _ciq_automation = rule(
         "language": attr.string(
             doc = "Optional simulator language (e.g., 'English', 'French', 'German', or ISO code like 'eng', 'fre', 'deu').",
         ),
+        "glance_mode": attr.bool(
+            default = False,
+            doc = "Whether to launch Glance-capable applications (such as widgets and watch apps) in Glance Mode instead of Normal Mode.",
+        ),
         "simulate_activity": attr.bool(
             default = False,
             doc = "Whether to simulate FIT/sensor activity data during the session.",
@@ -320,7 +326,7 @@ def ciq_automation(name, screenshot_out = None, log_out = None, **kwargs):
         name: The target name.
         screenshot_out: Optional custom filename for the generated screenshot PNG (defaults to `<name>.png`).
         log_out: Optional custom filename for the generated application log (defaults to `<name>.log`).
-        **kwargs: Arguments forwarded to the underlying automation rule (`device_build`, `layout`, `background_color`, `settings`, `actions`, `timer_actions`, `simulate_activity`, `fit_file`, `language`, `time_display`, `units_display`, `wait_for_log`, `delay_ms`, `timeout_secs`, etc.).
+        **kwargs: Arguments forwarded to the underlying automation rule (`device_build`, `layout`, `background_color`, `settings`, `actions`, `timer_actions`, `simulate_activity`, `fit_file`, `language`, `glance_mode`, `time_display`, `units_display`, `wait_for_log`, `delay_ms`, `timeout_secs`, etc.).
     """
     _ciq_automation(
         name = name,

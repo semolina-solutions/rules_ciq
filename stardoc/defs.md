@@ -427,7 +427,7 @@ or pass `:<name>` to rules that accept `AutomationInfo`.
 | <a id="ciq_automation-name"></a>name |  The target name.  |    |
 | <a id="ciq_automation-screenshot_out"></a>screenshot_out |  Optional custom filename for the generated screenshot PNG (defaults to `<name>.png`).  |  None  |
 | <a id="ciq_automation-log_out"></a>log_out |  Optional custom filename for the generated application log (defaults to `<name>.log`).  |  None  |
-| <a id="ciq_automation-kwargs"></a>kwargs |  Arguments forwarded to the underlying automation rule (`device_build`, `layout`, `background_color`, `settings`, `actions`, `timer_actions`, `simulate_activity`, `fit_file`, `language`, `time_display`, `units_display`, `wait_for_log`, `delay_ms`, `timeout_secs`, etc.).  |    |
+| <a id="ciq_automation-kwargs"></a>kwargs |  Arguments forwarded to the underlying automation rule (`device_build`, `layout`, `background_color`, `settings`, `actions`, `timer_actions`, `simulate_activity`, `fit_file`, `language`, `glance_mode`, `time_display`, `units_display`, `wait_for_log`, `delay_ms`, `timeout_secs`, etc.).  |    |
 
 **RETURNS**
 

@@ -84,6 +84,9 @@ pub struct AutomateArgs {
     pub language: Option<String>,
 
     #[arg(long, default_value_t = false)]
+    pub glance_mode: bool,
+
+    #[arg(long, default_value_t = false)]
     pub simulate_activity: bool,
 
     #[arg(long)]
@@ -1085,11 +1088,30 @@ async fn run_automation(args: AutomateArgs) -> Result<()> {
         }
     }
 
+    let mut ini_lines = vec![format!("Glance={}", if args.glance_mode { 1 } else { 0 })];
+
     if let Some(lang) = &args.language {
         if let Some(lang_idx) = resolve_language_ini_index(lang) {
-            fs::write(work_dir.join("simulator.ini"), format!("Language={}\n", lang_idx))?;
+            ini_lines.push(format!("Language={}", lang_idx));
         }
     }
+    fs::write(work_dir.join("simulator.ini"), ini_lines.join("\n") + "\n")?;
+
+    let patched_sim_json_mount = if sim_json_str.contains("\"glanceLaunchMenuDisabled\"") {
+        let patched = sim_json_str.replace(
+            "\"glanceLaunchMenuDisabled\": true",
+            "\"glanceLaunchMenuDisabled\": false",
+        );
+        let patched_path = work_dir.join("device_simulator.json");
+        fs::write(&patched_path, patched)?;
+        Some(format!(
+            "{}:/root/.Garmin/ConnectIQ/Devices/{}/simulator.json:ro",
+            patched_path.to_string_lossy().replace('\\', "/"),
+            args.device
+        ))
+    } else {
+        None
+    };
 
     if let Some(fit_path) = &args.fit_file {
         let ext = fit_path
@@ -1137,27 +1159,35 @@ async fn run_automation(args: AutomateArgs) -> Result<()> {
     );
     let work_mount = format!("{}:/work", work_dir.to_string_lossy().replace('\\', "/"));
 
+    let mut docker_args = vec![
+        "run".to_string(),
+        "--rm".to_string(),
+        "--platform".to_string(),
+        "linux/amd64".to_string(),
+        "--name".to_string(),
+        unique_id.clone(),
+        "-v".to_string(),
+        linux_sdk_mount,
+        "-v".to_string(),
+        devices_mount,
+    ];
+    if let Some(patched_mount) = patched_sim_json_mount {
+        docker_args.push("-v".to_string());
+        docker_args.push(patched_mount);
+    }
+    docker_args.extend([
+        "-v".to_string(),
+        fonts_mount,
+        "-v".to_string(),
+        work_mount,
+        image_tag,
+        "bash".to_string(),
+        "-c".to_string(),
+        container_script.to_string(),
+    ]);
+
     let child = docker_std_command()
-        .args([
-            "run",
-            "--rm",
-            "--platform",
-            "linux/amd64",
-            "--name",
-            &unique_id,
-            "-v",
-            &linux_sdk_mount,
-            "-v",
-            &devices_mount,
-            "-v",
-            &fonts_mount,
-            "-v",
-            &work_mount,
-            &image_tag,
-            "bash",
-            "-c",
-            container_script,
-        ])
+        .args(&docker_args)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
@@ -1441,6 +1471,7 @@ mod tests {
             time_display: None,
             units_display: None,
             language: None,
+            glance_mode: false,
             simulate_activity: false,
             fit_file: None,
             timer_actions: vec![],
