@@ -29,7 +29,7 @@ This repository provides [Bazel](https://bazel.build/) rules for building, simul
         *   macOS: Install via Homebrew: `brew install libmtp`
         *   Linux: Install via apt: `sudo apt-get install libmtp-dev`
     * Optional:
-        * **[Docker](https://www.docker.com/)**: Required for headless simulator automation (`ciq_automation`, `ciq_log_test`, `ciq_screenshot_test`)
+        * **[Docker](https://www.docker.com/)** (or a compatible runtime such as [Colima](https://github.com/abiosoft/colima), [OrbStack](https://orbstack.dev/), or [Rancher Desktop](https://rancherdesktop.io/)): Required for headless simulator automation and screenshotting (`ciq_automation`, `ciq_log_test`, `ciq_screenshot_test`). See [Headless simulator automation](#headless-simulator-automation).
         * **[Bazel watcher](https://github.com/bazelbuild/bazel-watcher)** aka **ibazel**
         * **[Bazel plugin for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=BazelBuild.vscode-bazel)**
 
@@ -51,12 +51,6 @@ containing the following reference to your CIQ developer key:
     ```
 
 1. Create a `MODULE.bazel` file for your project and add the `rules_ciq` dependency:
-
-    ```python
-    bazel_dep(name = "rules_ciq", version = "0.2.0")
-    ```
-
-    If you'd prefer to be on the bleeding edge, instead use:
 
     ```python
     bazel_dep(name = "rules_ciq")
@@ -105,6 +99,110 @@ the same directory as the `BUILD.bazel` file, run in the terminal:
     The generated file will be written to the `bazel-bin` directory. You can
     observe that all devices that support widgets and a minimum API level
     `3.0.0` are included.
+
+## Headless simulator automation
+
+The `ciq_automation` rule runs a `ciq_device_build` inside a containerized Linux Connect IQ Simulator (running under Xvfb), drives it with scripted input, and produces two build outputs:
+
+*   `<name>.png`: a screenshot of the device display at the end of the session.
+*   `<name>.log`: the application's stdout (e.g. `System.println` output) captured during the session.
+
+Because these are regular Bazel build outputs, they are cached, can be generated for many devices in parallel, and can be fed into downstream rules: assertions (`ciq_log_test`, `ciq_screenshot_test`) or store asset generation (`ciq_field_screenshot`, `ciq_framed_screenshot`). This makes it possible to produce up-to-date store screenshots and run UI regression tests from the command line or in CI, without opening the simulator GUI.
+
+### How it works
+
+*   The container image is built on demand from [`simulator/Dockerfile`](simulator/Dockerfile) (Ubuntu, `linux/amd64`) and cached by content hash, so it is only rebuilt when the Dockerfile or automation hook changes.
+*   The Linux build of the Connect IQ SDK is provisioned hermetically alongside your other SDKs, and your hermetic `Devices/` and `Fonts/` directories are mounted read-only into the container. Your host OS does not need to be Linux.
+*   A small GTK hook injected into the simulator replays the requested menu selections, button presses, touch gestures, and dialog interactions, then saves the display to PNG.
+*   The rules locate the `docker` binary and daemon socket automatically, including Homebrew installs and Colima, OrbStack, Docker Desktop, and Rancher Desktop sockets. Set `DOCKER_HOST` to override.
+
+> **Note**: The container runs as `linux/amd64`. On Apple Silicon Macs this needs x86_64 emulation (e.g. Docker Desktop with Rosetta, or `colima start --arch x86_64`). The Docker VM must also be able to mount your Bazel output base and temp directory (e.g. with Colima: `--mount /Users:w --mount /private/var:w`).
+
+### Example
+
+```python
+load(
+    "@rules_ciq//:defs.bzl",
+    "ciq_automation",
+    "ciq_device_build",
+    "ciq_framed_screenshot",
+    "ciq_log_test",
+    "ciq_screenshot_test",
+)
+
+ciq_device_build(
+    name = "my_app_fenix6_debug_build",
+    device_id = "fenix6",
+    project = ":my_project",
+)
+
+# Produces :my_app_menu.png and :my_app_menu.log.
+ciq_automation(
+    name = "my_app_menu",
+    device_build = ":my_app_fenix6_debug_build",
+    language = "deu",
+    time_display = "24 Hour",
+    units_display = "Metric",
+    settings = {
+        "theme": "string:dark",
+        "targetHr": "int:165",
+    },
+    wait_for_log = "app ready",  # Wait for this before sending input.
+    actions = [
+        "press:down",
+        "wait:300",
+        "press:enter",
+        "hold:menu",
+    ],
+)
+
+# Assert on the captured log output.
+ciq_log_test(
+    name = "my_app_menu_log_test",
+    log = ":my_app_menu.log",
+    expect_logs = ["page=2"],
+    forbid_logs = ["ERROR"],
+)
+
+# Compare the screenshot against a checked-in golden image.
+ciq_screenshot_test(
+    name = "my_app_menu_screenshot_test",
+    expected = "golden/my_app_menu.png",
+    screenshot = ":my_app_menu.png",
+)
+
+# Put the screenshot into a device frame for the Connect IQ Store.
+ciq_framed_screenshot(
+    name = "my_app_menu_framed",
+    device_id = "fenix6",
+    screenshots = [":my_app_menu.png"],
+)
+```
+
+```bash
+bazel build //:my_app_menu        # Generate the screenshot and log
+bazel test //:my_app_menu_log_test //:my_app_menu_screenshot_test
+```
+
+To create or refresh a golden image, build the `ciq_automation` target and copy `bazel-bin/<package>/<name>.png` into your source tree.
+
+### Automation options
+
+| Attribute | Description |
+| --- | --- |
+| `actions` | Ordered input sequence. Supported: `press:<button>`, `hold:<button>` (long press), `tap:<x>,<y>`, `touch_hold:<x>,<y>`, `swipe:<left\|right\|up\|down>`, `swipe:<x1>,<y1>,<x2>,<y2>` / `drag:...`, `wait:<ms>`, and `menu:<simulator menu path>`. Button names come from the device's `simulator.json` (e.g. `up`, `down`, `enter`/`select`/`start`, `esc`/`back`, `menu`). Coordinates are display pixels or percentages (e.g. `tap:50%,50%`). |
+| `settings` | Application settings/properties written to a `.SET` file before launch, as `{"key": "type:value"}` with `int`, `long`, `float`, `double`, `bool`, or `string` types. |
+| `language`, `time_display`, `units_display` | Simulator locale and display settings (e.g. `"deu"`, `"24 Hour"`, `"Metric"`). |
+| `layout`, `background_color` | Data field layout (e.g. `"3 Fields A"`) and background (`"White"` / `"Black"`). |
+| `fit_file`, `simulate_activity` | Play back a `.fit`/`.gpx` activity file for deterministic sensor data, or use simulated activity data. |
+| `timer_actions` | Activity timer controls for data fields: `start`, `pause`, `resume`, `lap`, `workout_step`, `next_multisport`, `save`, `discard`. |
+| `glance_mode` | Launch glance-capable apps in glance view instead of the full app. |
+| `wait_for_log` | Substring or regex to wait for in the app log before sending input. |
+| `delay_ms`, `timeout_secs` | Settle time before the final screenshot (default 1500 ms), and the overall session timeout (default 120 s). |
+
+`ciq_log_test` checks `expect_logs` / `forbid_logs` substrings or regexes against a log. `ciq_screenshot_test` compares pixels exactly by default; use `pixel_tolerance` (per-channel difference) and `max_diff_pixels` to allow small differences.
+
+See [`samples/simulator`](samples/simulator) for complete examples, and the [Stardoc reference](stardoc/defs.md) for every attribute.
 
 ## Managing SDKs, Devices, and Fonts
 
