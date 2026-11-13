@@ -1105,6 +1105,8 @@ def _ciq_device_build_impl(ctx):
         flags.append("-k")
     if ctx.attr.type_check_level:
         flags.append("-l {}".format(ctx.attr.type_check_level))
+    if ctx.attr.optimization_level:
+        flags.append('-O "{}"'.format(ctx.attr.optimization_level))
 
     ctx.actions.run_shell(
         execution_requirements = {
@@ -1180,6 +1182,9 @@ ciq_device_build = rule(
             doc = "Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict).",
             values = _TYPE_CHECK_LEVELS,
         ),
+        "optimization_level": attr.string(
+            doc = "Optimization level passed to monkeyc via -O (e.g., '0', '1', '2', '3', 'p', 'z', '2pz', '3pz'). If unset, monkeyc uses its mode default ('1' for debug, '2' for release).",
+        ),
     },
 )
 
@@ -1190,7 +1195,11 @@ def _ciq_export_impl(ctx):
     jungles_info = ctx.attr.project[JunglesInfo]
     name = ctx.label.name
     iq_file = ctx.actions.declare_file(name + ".iq")
-    type_check_level = "-l {}".format(ctx.attr.type_check_level) if ctx.attr.type_check_level else ""
+    flags = ["-e", "-r"]
+    if ctx.attr.type_check_level:
+        flags.append("-l {}".format(ctx.attr.type_check_level))
+    if ctx.attr.optimization_level:
+        flags.append('-O "{}"'.format(ctx.attr.optimization_level))
     ctx.actions.run_shell(
         execution_requirements = {
             # Allows default.jungle to be written.
@@ -1202,14 +1211,14 @@ def _ciq_export_impl(ctx):
         # monkeyc tool.
         command = """
       chmod 644 "{manifest}"
-      bash "{executable}" -o "{iq}" -y "{key}" -f "{jungles}" -e -r {type_check_level}
+      bash "{executable}" -o "{iq}" -y "{key}" -f "{jungles}" {flags}
     """.format(
             manifest = manifest_info.manifest_file.path,
             executable = sdk_info.monkeyc_path,
             iq = iq_file.path,
             key = key_path,
             jungles = ";".join([f.path for f in jungles_info.jungle_files]),
-            type_check_level = type_check_level,
+            flags = " ".join(flags),
         ),
     )
     return [
@@ -1231,6 +1240,9 @@ ciq_export = rule(
         "type_check_level": attr.int(
             doc = "Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict). Default is 0.",
             values = _TYPE_CHECK_LEVELS,
+        ),
+        "optimization_level": attr.string(
+            doc = "Optimization level passed to monkeyc via -O (e.g., '0', '1', '2', '3', 'p', 'z', '2pz', '3pz'). If unset, monkeyc uses its release default ('2').",
         ),
     },
 )

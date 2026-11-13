@@ -31,7 +31,13 @@ _SIDELOAD_APP_TEMPLATE = "{name}_{device_id}_{mode}_sideload_app"
 _PROFILING_SIDELOAD_APP_TEMPLATE = "{name}_{device_id}_{mode}_profiling_sideload_app"
 _TEST_TEMPLATE = "{name}_{device_id}_test"
 
-def ciq_device_targets_macro(name, visibility = None, project = None, device_ids = devices.keys(), type_check_level = None):
+def ciq_device_targets_macro(
+        name,
+        visibility = None,
+        project = None,
+        device_ids = devices.keys(),
+        type_check_level = None,
+        optimization_level = None):
     """Generates debug and release build, simulation, and device interaction targets for multiple devices.
 
     For example, if `name` is "my_app" and `device_ids` includes "fenix6",
@@ -72,6 +78,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
         project: The Connect IQ project to build.
         device_ids: List of device IDs to generate targets for. Defaults to all available devices.
         type_check_level: Type check level for the build (0=Silent, 1=Gradual, 2=Informative, 3=Strict).
+        optimization_level: Optimization level passed to monkeyc via -O (e.g., '0', '1', '2', '3', 'p', 'z', '2pz', '3pz').
     """
     for device_id in device_ids:
         for mode in [_MODE_DEBUG, _MODE_RELEASE]:
@@ -84,6 +91,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 device_id = device_id,
                 release = is_release,
                 type_check_level = type_check_level,
+                optimization_level = optimization_level,
                 visibility = visibility,
             )
 
@@ -95,6 +103,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
                 release = is_release,
                 profiling = True,
                 type_check_level = type_check_level,
+                optimization_level = optimization_level,
                 visibility = visibility,
             )
 
@@ -147,6 +156,7 @@ def ciq_device_targets_macro(name, visibility = None, project = None, device_ids
             device_id = device_id,
             testing = True,
             type_check_level = type_check_level,
+            optimization_level = optimization_level,
             visibility = visibility,
         )
         ciq_test(

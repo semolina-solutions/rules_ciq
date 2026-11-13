@@ -9,7 +9,7 @@ This module re-exports rules and providers from the various sub-packages
 
 
 <pre>
-ciq_device_build(<a href="#ciq_device_build-name">name</a>, <a href="#ciq_device_build-device_id">device_id</a>, <a href="#ciq_device_build-profiling">profiling</a>, <a href="#ciq_device_build-project">project</a>, <a href="#ciq_device_build-release">release</a>, <a href="#ciq_device_build-testing">testing</a>, <a href="#ciq_device_build-type_check_level">type_check_level</a>)
+ciq_device_build(<a href="#ciq_device_build-name">name</a>, <a href="#ciq_device_build-device_id">device_id</a>, <a href="#ciq_device_build-optimization_level">optimization_level</a>, <a href="#ciq_device_build-profiling">profiling</a>, <a href="#ciq_device_build-project">project</a>, <a href="#ciq_device_build-release">release</a>, <a href="#ciq_device_build-testing">testing</a>, <a href="#ciq_device_build-type_check_level">type_check_level</a>)
 </pre>
 
 Builds the application (.prg) for a specific device.
@@ -20,6 +20,7 @@ Builds the application (.prg) for a specific device.
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_device_build-name"></a>name |  A unique name for this target.  | NAME | true |    |
 | <a id="ciq_device_build-device_id"></a>device_id |  Target device ID to build for (e.g., 'fenix6').  | STRING | true |    |
+| <a id="ciq_device_build-optimization_level"></a>optimization_level |  Optimization level passed to monkeyc via -O (e.g., '0', '1', '2', '3', 'p', 'z', '2pz', '3pz'). If unset, monkeyc uses its mode default ('1' for debug, '2' for release).  | STRING | false |  ""  |
 | <a id="ciq_device_build-profiling"></a>profiling |  Enable profiling in the build.  | BOOLEAN | false |  False  |
 | <a id="ciq_device_build-project"></a>project |  The ciq_project target containing the manifest, jungle assets, and target SDK.  | LABEL | true |    |
 | <a id="ciq_device_build-release"></a>release |  Build in release mode (optimized, no debug symbols).  | BOOLEAN | false |  False  |
@@ -31,7 +32,7 @@ Builds the application (.prg) for a specific device.
 
 
 <pre>
-ciq_export(<a href="#ciq_export-name">name</a>, <a href="#ciq_export-project">project</a>, <a href="#ciq_export-type_check_level">type_check_level</a>)
+ciq_export(<a href="#ciq_export-name">name</a>, <a href="#ciq_export-optimization_level">optimization_level</a>, <a href="#ciq_export-project">project</a>, <a href="#ciq_export-type_check_level">type_check_level</a>)
 </pre>
 
 Exports the application (.iq) for distribution.
@@ -41,6 +42,7 @@ Exports the application (.iq) for distribution.
 | Name | Description | Type | Mandatory | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | <a id="ciq_export-name"></a>name |  A unique name for this target.  | NAME | true |    |
+| <a id="ciq_export-optimization_level"></a>optimization_level |  Optimization level passed to monkeyc via -O (e.g., '0', '1', '2', '3', 'p', 'z', '2pz', '3pz'). If unset, monkeyc uses its release default ('2').  | STRING | false |  ""  |
 | <a id="ciq_export-project"></a>project |  The ciq_project target containing the manifest, jungle assets, and target SDK.  | LABEL | true |    |
 | <a id="ciq_export-type_check_level"></a>type_check_level |  Type checking level: 0 (Silent), 1 (Gradual), 2 (Informative), or 3 (Strict). Default is 0.  | INT | false |  0  |
 
